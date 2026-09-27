@@ -1,0 +1,7 @@
+CyberTriage sample evidence - analyst notes
+Laptop seized from the front desk. Owner reports a slow machine and pop-ups after installing a "PDF invoice" attachment.
+Observed outbound connection attempts to malware-c2.xyz every 60 seconds.
+Suspicious scheduled task name: WinUpdateSvc.
+Do not open /evidence/files/invoice_2026.pdf.exe on a production host.
+User reported account lockouts on 2026-09-12 in the early morning.
+Case reference: DEMO-2026-0912
