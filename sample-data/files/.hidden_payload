@@ -1,0 +1,5 @@
+# CyberTriage synthetic sample artifact - hidden staging file.
+# Content is a base64-ish blob, intentionally not a real payload.
+c2VjcmV0IHN0YWdpbmcgZGlyZWN0b3J5IGZvciB0aGUgZGVtbyBjYXNl
+YmFzZTY0IGJsb2IgcGFydCAyIC0gbm90IGEgcmVhbCBwYXlsb2Fk
+bm90aGluZyB0byBzZWUgaGVyZSwgbW92ZSBhbG9uZw==
