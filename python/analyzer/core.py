@@ -115,6 +115,11 @@ class CaseAnalyzer:
         self._update_case_status(case_id, 'Analyzing')
         self._audit(case_id, 'Analysis started', f'{len(evidence_list)} evidence items')
 
+        # Re-analysis replaces previous derived results instead of duplicating them
+        for table in ('artifacts', 'ioc_findings', 'timeline_events', 'network_activity'):
+            self.db.execute(f'DELETE FROM {table} WHERE case_id=?', (case_id,))
+        self.db.commit()
+
         all_file_artifacts = []
         all_log_events = []
         all_log_patterns = []
@@ -327,11 +332,16 @@ class CaseAnalyzer:
 
     def _store_artifact(self, art: Dict, art_id: str, case_id: str, evidence_id: str):
         try:
+            stored = {
+                k: v for k, v in art.items()
+                if k in ('findings', 'anomaly_features')
+                or (k not in ('full_content', 'content_preview') and not isinstance(v, (list, dict)))
+            }
             self.db.execute(
                 'INSERT OR IGNORE INTO artifacts (id, evidence_id, case_id, artifact_type, name, value, timestamp, source, severity, description, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
                 (art_id, evidence_id, case_id, 'File',
                  str(art.get('name', ''))[:200],
-                 json.dumps({k: v for k, v in art.items() if k not in ('full_content', 'content_preview') and not isinstance(v, (list, dict)) or k in ('findings', 'anomaly_features')}, default=str)[:2000],
+                 json.dumps(stored, default=str),
                  str(art.get('modified', art.get('created', datetime.now().isoformat())))[:19],
                  'File Analysis',
                  art.get('severity', 'LOW'),
@@ -348,9 +358,10 @@ class CaseAnalyzer:
         results = rows_to_list(rows)
         for r in results:
             try:
-                r['value'] = json.loads(r.get('value') or '{}')
+                parsed = json.loads(r.get('value') or '{}')
             except Exception:
-                pass
+                parsed = {}
+            r['value'] = parsed if isinstance(parsed, dict) else {'raw': parsed}
         return results
 
     def get_iocs(self, case_id: str) -> List[Dict]:
@@ -461,13 +472,14 @@ class CaseAnalyzer:
     def load_sample_data(self, case_id: str) -> Dict:
         """Load synthetic demo data into the case."""
         sample_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'sample-data')
+        already_imported = {ev.get('filepath') for ev in self.get_evidence(case_id)}
         imported = []
         for subdir in ['files', 'logs', 'network']:
             path = os.path.join(sample_dir, subdir)
             if os.path.isdir(path):
                 for fname in os.listdir(path):
                     fpath = os.path.join(path, fname)
-                    if os.path.isfile(fpath):
+                    if os.path.isfile(fpath) and fpath not in already_imported:
                         result = self.import_evidence(case_id, fpath)
                         imported.append(result)
         return {'imported': len(imported), 'items': imported}
