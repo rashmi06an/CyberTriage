@@ -1,0 +1,30 @@
+{
+  "records": [
+    {"timestamp": "2026-09-12 02:16:11", "source_ip": "192.168.1.23", "source_port": 51822, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 48211, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 02:17:43", "source_ip": "192.168.1.23", "source_port": 51824, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 1502, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 02:19:05", "source_ip": "192.168.1.23", "source_port": 51830, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 892, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 02:21:37", "source_ip": "192.168.1.23", "source_port": 51844, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 1337, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 02:24:52", "source_ip": "192.168.1.23", "source_port": 51858, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 2048, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 02:31:19", "source_ip": "192.168.1.23", "source_port": 51890, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 512, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 03:02:44", "source_ip": "192.168.1.23", "source_port": 52002, "destination_ip": "185.220.101.2", "destination_port": 1337, "protocol": "TCP", "bytes": 92160, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 03:08:12", "source_ip": "192.168.1.23", "source_port": 52014, "destination_ip": "185.220.101.2", "destination_port": 1337, "protocol": "TCP", "bytes": 1048576, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 03:14:55", "source_ip": "192.168.1.23", "source_port": 52028, "destination_ip": "185.220.101.2", "destination_port": 1337, "protocol": "TCP", "bytes": 2097152, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 03:20:31", "source_ip": "192.168.1.23", "source_port": 52040, "destination_ip": "185.220.101.2", "destination_port": 1337, "protocol": "TCP", "bytes": 4194304, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 09:15:02", "source_ip": "192.168.1.23", "source_port": 52110, "destination_ip": "185.220.101.2", "destination_port": 3389, "protocol": "TCP", "bytes": 768, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 09:22:48", "source_ip": "192.168.1.23", "source_port": 52126, "destination_ip": "185.220.101.2", "destination_port": 3389, "protocol": "TCP", "bytes": 1024, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 09:41:07", "source_ip": "192.168.1.23", "source_port": 52302, "destination_ip": "185.220.101.2", "destination_port": 8443, "protocol": "TCP", "bytes": 65536, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 10:02:19", "source_ip": "192.168.1.23", "source_port": 52418, "destination_ip": "185.220.101.2", "destination_port": 8080, "protocol": "TCP", "bytes": 32768, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 10:29:56", "source_ip": "192.168.1.23", "source_port": 52502, "destination_ip": "185.220.101.2", "destination_port": 1337, "protocol": "TCP", "bytes": 524288, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 11:05:41", "source_ip": "192.168.1.23", "source_port": 52640, "destination_ip": "185.220.101.2", "destination_port": 9999, "protocol": "TCP", "bytes": 4096, "anomaly_flag": true},
+    {"timestamp": "2026-09-12 03:44:10", "source_ip": "192.168.1.50", "source_port": 41302, "destination_ip": "45.33.32.156", "destination_port": 22, "protocol": "TCP", "bytes": 2048, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 03:45:52", "source_ip": "192.168.1.50", "source_port": 41318, "destination_ip": "45.33.32.156", "destination_port": 22, "protocol": "TCP", "bytes": 1024, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 03:47:23", "source_ip": "192.168.1.50", "source_port": 41326, "destination_ip": "45.33.32.156", "destination_port": 80, "protocol": "TCP", "bytes": 512, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 08:59:12", "source_ip": "192.168.1.23", "source_port": 50512, "destination_ip": "192.168.1.10", "destination_port": 445, "protocol": "TCP", "bytes": 8192, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 09:01:44", "source_ip": "192.168.1.23", "source_port": 50520, "destination_ip": "192.168.1.10", "destination_port": 139, "protocol": "TCP", "bytes": 4096, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 09:02:37", "source_ip": "192.168.1.23", "source_port": 50534, "destination_ip": "8.8.8.8", "destination_port": 53, "protocol": "UDP", "bytes": 128, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 09:18:29", "source_ip": "192.168.1.44", "source_port": 49002, "destination_ip": "192.168.1.1", "destination_port": 80, "protocol": "TCP", "bytes": 768, "anomaly_flag": false},
+    {"timestamp": "2026-09-12 09:33:15", "source_ip": "192.168.1.44", "source_port": 49018, "destination_ip": "140.82.121.4", "destination_port": 443, "protocol": "TCP", "bytes": 65536, "anomaly_flag": false},
+    {"timestamp": "2026-09-13 01:29:40", "source_ip": "192.168.1.23", "source_port": 53002, "destination_ip": "185.220.101.2", "destination_port": 4444, "protocol": "TCP", "bytes": 2048, "anomaly_flag": true},
+    {"timestamp": "2026-09-14 04:12:00", "source_ip": "192.168.1.23", "source_port": 53118, "destination_ip": "185.220.101.2", "destination_port": 1337, "protocol": "TCP", "bytes": 3072, "anomaly_flag": true}
+  ]
+}
