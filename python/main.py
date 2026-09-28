@@ -15,7 +15,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from analyzer.core import CaseAnalyzer
 from utils.db import init_db
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'cybertriage.db')
+SOURCE_ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+DATA_DIR = os.path.abspath(os.environ.get('CYBERTRIAGE_DATA_DIR', SOURCE_ROOT))
+RESOURCES_DIR = os.path.abspath(os.environ.get('CYBERTRIAGE_RESOURCES_DIR', SOURCE_ROOT))
+REPORTS_DIR = os.path.abspath(os.environ.get('CYBERTRIAGE_REPORTS_DIR', os.path.join(SOURCE_ROOT, 'python', 'reports_output')))
+DB_PATH = os.path.join(DATA_DIR, 'cybertriage.db')
+SCHEMA_PATH = os.path.join(RESOURCES_DIR, 'database', 'schema.sql')
+SAMPLE_DIR = os.path.join(RESOURCES_DIR, 'sample-data')
 
 
 def send(obj: dict):
@@ -26,8 +32,8 @@ def handle(cmd: dict) -> dict:
     action = cmd.get('action', '')
     payload = cmd.get('payload', {})
 
-    db = init_db(DB_PATH)
-    analyzer = CaseAnalyzer(db)
+    db = init_db(DB_PATH, SCHEMA_PATH)
+    analyzer = CaseAnalyzer(db, sample_dir=SAMPLE_DIR, reports_dir=REPORTS_DIR)
 
     try:
         if action == 'ping':

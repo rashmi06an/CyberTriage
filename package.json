@@ -1,27 +1,30 @@
 {
   "name": "cybertriage",
+  "version": "1.0.0",
   "private": true,
-  "version": "0.0.0",
+  "description": "A desktop DFIR triage tool for academic demonstration.",
+  "author": "Rashmi Anand",
   "type": "module",
   "main": "electron/main.ts",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build:renderer": "tsc -b && vite build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build:engine": "python/venv/bin/python3 -m PyInstaller --noconfirm --clean --onefile --name CyberTriageEngine --distpath artifacts/engine --workpath artifacts/build --specpath artifacts/spec --collect-all sklearn --collect-all reportlab python/main.py",
+    "build": "npm run build:renderer && npm run build:electron",
     "lint": "oxlint",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:dev": "node scripts/check-dev-port.mjs && npm run build:electron && concurrently -k \"cross-env BROWSER=none vite --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
-    "package": "npm run electron:build",
-    "package:dmg": "npm run electron:build -- --mac dmg"
+    "package": "npm run package:mac-arm64",
+    "package:dmg": "npm run package:mac-arm64",
+    "package:mac-arm64": "npm run build:engine && npm run electron:build -- --mac dmg --arm64"
   },
   "dependencies": {
-    "@types/react-router-dom": "^5.3.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.4",
-    "recharts": "^3.10.1",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^6.0.1"
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -33,11 +36,54 @@
     "cross-env": "^10.1.0",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "wait-on": "^9.1.0"
+  },
+  "build": {
+    "appId": "com.rashmianand.cybertriage",
+    "productName": "CyberTriage",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "asar": true,
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "artifacts/engine/CyberTriageEngine",
+        "to": "engine/CyberTriageEngine"
+      },
+      {
+        "from": "database/schema.sql",
+        "to": "database/schema.sql"
+      },
+      {
+        "from": "sample-data",
+        "to": "sample-data"
+      }
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main.mjs"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    }
   }
 }

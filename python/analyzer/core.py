@@ -22,8 +22,11 @@ from reports.generator import generate_pdf, generate_json_export, generate_csv_e
 
 
 class CaseAnalyzer:
-    def __init__(self, db: sqlite3.Connection):
+    def __init__(self, db: sqlite3.Connection, sample_dir: Optional[str] = None, reports_dir: Optional[str] = None):
         self.db = db
+        source_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')
+        self.sample_dir = sample_dir or os.path.join(source_root, 'sample-data')
+        self.reports_dir = reports_dir or os.path.join(source_root, 'python', 'reports_output')
 
     def _audit(self, case_id: str, action: str, details: str = ''):
         self.db.execute(
@@ -116,7 +119,7 @@ class CaseAnalyzer:
         self._audit(case_id, 'Analysis started', f'{len(evidence_list)} evidence items')
 
         # Re-analysis replaces previous derived results instead of duplicating them
-        for table in ('artifacts', 'ioc_findings', 'timeline_events', 'network_activity'):
+        for table in ('artifacts', 'ioc_findings', 'timeline_events', 'network_activity', 'risk_findings'):
             self.db.execute(f'DELETE FROM {table} WHERE case_id=?', (case_id,))
         self.db.commit()
 
@@ -448,10 +451,9 @@ class CaseAnalyzer:
         recommendations = risk.get('recommendations', [])
 
         if not output_path:
-            reports_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'reports_output')
-            os.makedirs(reports_dir, exist_ok=True)
+            os.makedirs(self.reports_dir, exist_ok=True)
             ts = datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_path = os.path.join(reports_dir, f'CyberTriage_Report_{case_id}_{ts}.{format}')
+            output_path = os.path.join(self.reports_dir, f'CyberTriage_Report_{case_id}_{ts}.{format}')
 
         if format == 'pdf':
             path = generate_pdf(case, evidence, artifacts, iocs, risk, recommendations, timeline, output_path)
@@ -471,11 +473,10 @@ class CaseAnalyzer:
 
     def load_sample_data(self, case_id: str) -> Dict:
         """Load synthetic demo data into the case."""
-        sample_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'sample-data')
         already_imported = {ev.get('filepath') for ev in self.get_evidence(case_id)}
         imported = []
         for subdir in ['files', 'logs', 'network']:
-            path = os.path.join(sample_dir, subdir)
+            path = os.path.join(self.sample_dir, subdir)
             if os.path.isdir(path):
                 for fname in os.listdir(path):
                     fpath = os.path.join(path, fname)

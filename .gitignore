@@ -1,5 +1,5 @@
 # Logs
-logs
+/logs
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -11,6 +11,18 @@ node_modules
 dist
 dist-ssr
 *.local
+
+# Python
+python/venv/
+__pycache__/
+*.pyc
+
+# Generated at runtime
+cybertriage.db*
+python/reports_output/
+dist-electron/
+artifacts/
+release/
 
 # Editor directories and files
 .vscode/*

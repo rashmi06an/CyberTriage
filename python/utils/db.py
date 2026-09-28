@@ -3,7 +3,7 @@ import sqlite3
 import os
 
 
-def init_db(db_path: str) -> sqlite3.Connection:
+def init_db(db_path: str, schema_path: str | None = None) -> sqlite3.Connection:
     """Initialize the SQLite database with the schema."""
     os.makedirs(os.path.dirname(db_path), exist_ok=True) if os.path.dirname(db_path) else None
     conn = sqlite3.connect(db_path)
@@ -11,12 +11,13 @@ def init_db(db_path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
 
-    schema_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        '..', '..', 'database', 'schema.sql'
-    )
+    if schema_path is None:
+        schema_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '..', '..', 'database', 'schema.sql'
+        )
     if os.path.exists(schema_path):
-        with open(schema_path, 'r') as f:
+        with open(schema_path, 'r', encoding='utf-8') as f:
             conn.executescript(f.read())
     conn.commit()
     return conn

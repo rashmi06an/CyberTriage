@@ -45,17 +45,44 @@ class PythonEngine {
     if (this.proc) return;
     this.stopping = false;
 
-    const venvPython = path.join(PROJECT_ROOT, 'python', 'venv', 'bin', 'python3');
+    const dataDir = app.isPackaged ? app.getPath('userData') : PROJECT_ROOT;
+    const resourcesDir = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
+    const reportsDir = app.isPackaged ? path.join(dataDir, 'reports') : path.join(PROJECT_ROOT, 'python', 'reports_output');
+    const enginePath = path.join(resourcesDir, 'engine', 'CyberTriageEngine');
+    const venvPython = path.join(
+      PROJECT_ROOT,
+      'python',
+      'venv',
+      process.platform === 'win32' ? 'Scripts' : 'bin',
+      process.platform === 'win32' ? 'python.exe' : 'python3'
+    );
     const useVenv = existsSync(venvPython);
-    const pythonBin = useVenv ? venvPython : 'python3';
-    this.setState('starting', useVenv ? 'Starting Python engine (python/venv)' : 'Starting Python engine (system python3)');
+    const command = app.isPackaged ? enginePath : useVenv ? venvPython : 'python3';
+    const args = app.isPackaged ? [] : [ENGINE_SCRIPT];
+    const detail = app.isPackaged
+      ? 'Starting bundled Python engine'
+      : useVenv
+        ? 'Starting Python engine (python/venv)'
+        : 'Starting Python engine (system python3)';
+    const setupHint = app.isPackaged
+      ? 'The bundled analysis engine is missing. Reinstall CyberTriage from the release DMG.'
+      : 'Install Python 3.10+, then run: python3 -m venv python/venv && python/venv/bin/pip install -r requirements.txt';
+    this.setState('starting', detail);
 
     this.readyPromise = new Promise<void>((resolve, reject) => {
       this.readyResolve = resolve;
       this.readyReject = reject;
     });
 
-    const proc = spawn(pythonBin, [ENGINE_SCRIPT], { cwd: PROJECT_ROOT });
+    const proc = spawn(command, args, {
+      cwd: dataDir,
+      env: {
+        ...process.env,
+        CYBERTRIAGE_DATA_DIR: dataDir,
+        CYBERTRIAGE_RESOURCES_DIR: resourcesDir,
+        CYBERTRIAGE_REPORTS_DIR: reportsDir,
+      },
+    });
     this.proc = proc;
 
     createInterface({ input: proc.stdout! }).on('line', (line) => {
@@ -67,10 +94,7 @@ class PythonEngine {
     });
     proc.on('error', (error) => {
       if (this.proc !== proc) return;
-      this.handleExit(
-        `Failed to start the Python engine (${error.message}). ` +
-        'Install Python 3.10+, then run: python3 -m venv python/venv && python/venv/bin/pip install -r requirements.txt'
-      );
+      this.handleExit(`Failed to start the Python engine (${error.message}). ${setupHint}`);
     });
     proc.on('exit', (code, signal) => {
       if (this.proc !== proc) return;
@@ -192,7 +216,9 @@ function createWindow() {
     backgroundColor: '#0b1220',
     title: 'CyberTriage',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.ts'),
+      preload: app.isPackaged
+        ? path.join(__dirname, 'preload.cjs')
+        : path.join(PROJECT_ROOT, 'dist-electron', 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -201,7 +227,7 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => mainWindow?.show());
 
   if (!app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://127.0.0.1:5173');
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
