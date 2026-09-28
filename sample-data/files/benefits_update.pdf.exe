@@ -1,0 +1,9 @@
+SYNTHETIC TRAINING ARTIFACT — NOT AN EXECUTABLE FILE
+
+Scenario: A staff member received a document-like attachment named “benefits_update.pdf.exe”. The double extension is intentional so the triage console can flag it as suspicious.
+
+Analyst note: The message referenced a benefits portal hosted at http://phishing-site.ml/benefits-review.
+Reported contact address: it-help@example.org
+Observed file hash (training value): 8f14e45fceea167a5a36dedd4bea2543
+
+This file contains only harmless text for a classroom demonstration. Do not treat any indicators in this file as real-world threat intelligence.

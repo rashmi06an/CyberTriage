@@ -1,0 +1,10 @@
+2026-09-18 01:12:04 vpn-gateway[8101]: Failed login for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:12:21 vpn-gateway[8103]: Failed login for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:12:43 vpn-gateway[8106]: Invalid credential for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:13:02 vpn-gateway[8110]: Failed password for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:13:24 vpn-gateway[8114]: Failed login for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:13:47 vpn-gateway[8118]: Failed password for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:14:09 vpn-gateway[8121]: Failed login for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:14:36 vpn-gateway[8125]: Failed password for finance.admin from 185.220.101.1 source=remote-vpn
+2026-09-18 01:28:15 vpn-gateway[8140]: Accepted login for finance.admin from 192.168.1.72 source=corporate-lan
+2026-09-18 08:05:11 vpn-gateway[8249]: Successful login for finance.admin from 192.168.1.72 source=corporate-lan
