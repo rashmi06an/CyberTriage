@@ -20,6 +20,7 @@ import {
   saveReportDialog,
 } from '../api';
 import { FilterChips, EmptyState, NoticeBar, Panel, ScoreGauge, SeverityBadge, Spinner, StatCard } from '../components/ui';
+import { NetworkGraph } from '../components/NetworkGraph';
 import { RISK_ORDER, SEV_ORDER } from '../constants';
 import { errorMessage, formatBytes, formatDateTime, formatTime, shortHash, statusSlug } from '../format';
 import type {
@@ -611,7 +612,13 @@ export default function CaseDetail() {
       ) : null}
 
       {tab === 'network' ? (
-        <Panel title={`Network activity (${network.length})`}>
+        <>
+          {network.length > 0 ? (
+            <Panel title="Network topology map">
+              <NetworkGraph records={network} />
+            </Panel>
+          ) : null}
+          <Panel title={`Network activity (${network.length})`}>
           {network.length === 0 ? (
             <EmptyState
               title="No network records"
@@ -648,7 +655,8 @@ export default function CaseDetail() {
               </table>
             </div>
           )}
-        </Panel>
+          </Panel>
+        </>
       ) : null}
 
       {tab === 'risk' ? (

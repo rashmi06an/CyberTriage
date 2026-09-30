@@ -115,9 +115,30 @@ select:focus-visible {
 /* Shell */
 
 .app-shell {
+  position: relative;
+  z-index: 1;
   display: flex;
   height: 100%;
   overflow: hidden;
+}
+
+.content-col {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* Animated network-mesh backdrop */
+.cyber-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.9;
 }
 
 .sidebar {
@@ -1224,7 +1245,219 @@ select:focus-visible {
 .troubleshooting-grid p { margin-top: 7px; color: var(--muted); font-size: 11.5px; line-height: 1.6; }
 code { padding: 2px 5px; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 5px; background: rgba(2, 6, 23, 0.45); color: #b7f7ee; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; }
 
+/* ── SOC command bar ─────────────────────────────────────────────── */
+
+.topbar {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 42px;
+  padding: 0 18px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, rgba(8, 14, 28, 0.92), rgba(12, 20, 38, 0.86));
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 0 rgba(94, 234, 212, 0.06), 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.topbar::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.5), transparent);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topbar-title {
+  color: var(--text-strong);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.topbar-sep {
+  width: 1px;
+  height: 15px;
+  background: var(--border);
+}
+
+.topbar-session {
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.live-ready { background: #34d399; box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.14), 0 0 12px rgba(52, 211, 153, 0.8); animation: live-blink 2s ease-in-out infinite; }
+.live-starting { background: #fbbf24; box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.14); animation: pulse 1.1s ease-in-out infinite; }
+.live-error { background: #fb7185; box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.14); }
+.live-stopped { background: #64748b; }
+
+.topbar-ticker {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+
+.ticker-track {
+  display: flex;
+  align-items: center;
+  gap: 34px;
+  height: 100%;
+  width: max-content;
+  animation: ticker 34s linear infinite;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.ticker-mark {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+.topbar-right {
+  display: flex;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.clock-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-strong);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-block small {
+  color: #5c6b83;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.nav-ico {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  margin-right: 9px;
+  color: var(--accent);
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.nav-link-active .nav-ico { opacity: 1; text-shadow: 0 0 10px rgba(94, 234, 212, 0.6); }
+
+/* ── Network topology graph ──────────────────────────────────────── */
+
+.netgraph-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.netgraph {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 720 / 460;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(15, 25, 46, 0.6), rgba(6, 11, 22, 0.85)),
+    repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.03) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(148, 163, 184, 0.03) 0 1px, transparent 1px 26px);
+}
+
+.netgraph-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0.2px;
+}
+
+.netgraph-legend {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.netgraph-legend span { display: inline-flex; align-items: center; gap: 7px; }
+
+.ng-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.ng-src { background: #5eead4; box-shadow: 0 0 8px rgba(94, 234, 212, 0.6); }
+.ng-dst { background: #60a5fa; box-shadow: 0 0 8px rgba(96, 165, 250, 0.6); }
+.ng-flag { background: #fb7185; box-shadow: 0 0 8px rgba(251, 113, 133, 0.6); }
+
+/* ── Cyber polish overrides ──────────────────────────────────────── */
+
+.panel::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(94, 234, 212, 0.35), transparent);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.panel:hover::before { opacity: 1; }
+
+.panel-head h2 { text-transform: uppercase; }
+
+.stat-value {
+  background: linear-gradient(180deg, #f5f9ff, #9fd8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 /* Motion */
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
 
 @keyframes page-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -1282,6 +1515,7 @@ code { padding: 2px 5px; border: 1px solid rgba(148, 163, 184, 0.2); border-radi
   .nav-label { width: 100%; margin: 2px 5px 0; }
   .nav-link { min-height: 36px; padding: 7px 11px; }
   .sidebar-foot { display: none; }
+  .topbar-ticker { display: none; }
   .main { overflow: visible; }
   .page { padding: 24px 20px 44px; }
   .dashboard-orbit { right: -120px; opacity: 0.35; }
@@ -1294,6 +1528,9 @@ code { padding: 2px 5px; border: 1px solid rgba(148, 163, 184, 0.2); border-radi
 }
 
 @media (max-width: 560px) {
+  .topbar { gap: 10px; padding: 0 12px; }
+  .topbar-session, .topbar-sep { display: none; }
+  .clock-block small { display: none; }
   .page { padding: 19px 14px 34px; }
   .dashboard-orbit { display: none; }
   .page-title { font-size: 25px; }

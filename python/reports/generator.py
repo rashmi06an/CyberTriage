@@ -6,24 +6,38 @@ import os
 from datetime import datetime
 from typing import Dict, List
 
-try:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
-    from reportlab.platypus import (
-        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    )
-    REPORTLAB_OK = True
-except ImportError:
-    REPORTLAB_OK = False
+# reportlab is imported lazily (see _load_reportlab) so importing this module —
+# and therefore starting the engine — does not pay the reportlab import cost.
+# It is only needed when a PDF report is actually generated.
+REPORTLAB_OK = None
+
+
+def _load_reportlab() -> bool:
+    """Import reportlab on first use, binding its symbols as module globals."""
+    global REPORTLAB_OK
+    global A4, colors, getSampleStyleSheet, ParagraphStyle, cm
+    global SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    if REPORTLAB_OK is not None:
+        return REPORTLAB_OK
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import cm
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+        )
+        REPORTLAB_OK = True
+    except ImportError:
+        REPORTLAB_OK = False
+    return REPORTLAB_OK
 
 
 def generate_pdf(case: Dict, evidence: List, artifacts: List, iocs: List,
                  risk: Dict, recommendations: List, timeline: List,
                  output_path: str) -> str:
     """Generate a PDF investigation report."""
-    if not REPORTLAB_OK:
+    if not _load_reportlab():
         return generate_text_report(case, evidence, artifacts, iocs, risk, recommendations, output_path.replace('.pdf', '.txt'))
 
     doc = SimpleDocTemplate(output_path, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)

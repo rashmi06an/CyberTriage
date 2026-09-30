@@ -48,7 +48,10 @@ class PythonEngine {
     const dataDir = app.isPackaged ? app.getPath('userData') : PROJECT_ROOT;
     const resourcesDir = app.isPackaged ? process.resourcesPath : PROJECT_ROOT;
     const reportsDir = app.isPackaged ? path.join(dataDir, 'reports') : path.join(PROJECT_ROOT, 'python', 'reports_output');
-    const enginePath = path.join(resourcesDir, 'engine', 'CyberTriageEngine');
+    // PyInstaller onedir layout: engine/CyberTriageEngine/CyberTriageEngine (+ _internal/).
+    // onedir avoids the per-launch self-extraction that a onefile binary pays,
+    // so the engine boots near-instantly instead of stalling on first launch.
+    const enginePath = path.join(resourcesDir, 'engine', 'CyberTriageEngine', 'CyberTriageEngine');
     const venvPython = path.join(
       PROJECT_ROOT,
       'python',
@@ -147,7 +150,7 @@ class PythonEngine {
     this.pending.clear();
   }
 
-  private async waitUntilReady(timeoutMs = 30000) {
+  private async waitUntilReady(timeoutMs = 60000) {
     if (this.state.state === 'ready') return;
     if (!this.proc) this.start();
     const ready = this.readyPromise ?? Promise.reject(new Error('Python engine is not running'));

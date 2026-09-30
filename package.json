@@ -5,12 +5,13 @@
   "description": "A desktop DFIR triage tool for academic demonstration.",
   "author": "Rashmi Anand",
   "type": "module",
-  "main": "electron/main.ts",
+  "main": "dist-electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build:renderer": "tsc -b && vite build",
     "build:electron": "node scripts/build-electron.mjs",
-    "build:engine": "python/venv/bin/python3 -m PyInstaller --noconfirm --clean --onefile --name CyberTriageEngine --distpath artifacts/engine --workpath artifacts/build --specpath artifacts/spec --collect-all sklearn --collect-all reportlab python/main.py",
+    "build:engine": "python/venv/bin/python3 -m PyInstaller --noconfirm --clean --onedir --contents-directory _internal --name CyberTriageEngine --distpath artifacts/engine --workpath artifacts/build --specpath artifacts/spec --collect-all sklearn --collect-all reportlab python/main.py",
+    "resign": "bash scripts/resign-dmg.sh",
     "build": "npm run build:renderer && npm run build:electron",
     "lint": "oxlint",
     "preview": "vite preview",
@@ -72,7 +73,7 @@
       }
     ],
     "extraMetadata": {
-      "main": "dist-electron/main.mjs"
+      "main": "dist-electron/main.cjs"
     },
     "mac": {
       "category": "public.app-category.utilities",

@@ -1,9 +1,12 @@
 """
 Isolation Forest anomaly detector.
 Uses real scikit-learn IsolationForest — not synthetic scores.
+
+numpy and scikit-learn are imported lazily inside run_anomaly_detection so the
+engine process can start (and emit its "ready" banner) instantly. Loading
+scikit-learn/scipy/numpy eagerly at import time added several seconds to every
+launch — they are only needed when analysis actually runs.
 """
-import numpy as np
-from sklearn.ensemble import IsolationForest
 from typing import List, Dict
 
 
@@ -68,6 +71,10 @@ def run_anomaly_detection(artifacts: List[Dict]) -> List[Dict]:
     """
     if not artifacts:
         return []
+
+    # Imported here (not at module top) so engine startup stays instant.
+    import numpy as np
+    from sklearn.ensemble import IsolationForest
 
     features = [build_feature_vector(a) for a in artifacts]
     X = np.array(features, dtype=float)
