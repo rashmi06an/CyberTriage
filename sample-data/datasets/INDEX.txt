@@ -1,0 +1,46 @@
+CyberTriage — Demo Datasets
+===========================
+
+Four self-contained, SYNTHETIC evidence sets (nothing here is a real threat).
+Each one is designed to produce a different, repeatable risk score so you can
+show the full range of the scoring engine in a single sitting.
+
+  Folder                      Expected score   Severity
+  --------------------------  --------------   --------
+  01-benign-baseline          ~9  / 100        LOW
+  02-suspicious-insider       ~42 / 100        MEDIUM
+  03-malware-infection        ~70 / 100        HIGH
+  04-apt-breach               ~86 / 100        CRITICAL
+
+Scores are deterministic — the same dataset always produces the same number.
+
+How to load one (in the app)
+----------------------------
+  1. Create a case (or open an existing one).
+  2. Click  Import evidence.
+  3. Open ONE dataset folder above, then press  Cmd+A  to select EVERY file
+     in it, and click  Import.
+         (Select the individual files — not the folder itself — so the logs,
+          network captures and files each get fully parsed.)
+  4. Click  Run analysis.
+  5. Open the Dashboard / Risk view to see the score and findings.
+
+Use a fresh case per dataset to compare scores side by side.
+
+What each dataset exercises
+---------------------------
+  01-benign-baseline     Normal business-hours logins, internal traffic on
+                         standard ports, ordinary office files. No IOCs of note.
+
+  02-suspicious-insider  A failed-login burst, after-hours activity, scripts
+                         pulling files from the internet, one chatty external
+                         host. Suspicious but no known-bad indicators.
+
+  03-malware-infection   Brute-forced account, dropped PowerShell loader + fake
+                         updater .exe, beaconing to known-bad hosting/Tor IPs,
+                         reverse-shell port (4444) in the capture.
+
+  04-apt-breach          Phishing payloads with double extensions, a hidden
+                         persistence script, sustained brute force, multiple
+                         known-bad C2 IPs and domains, beaconing across several
+                         malware ports (4444/1337/31337).

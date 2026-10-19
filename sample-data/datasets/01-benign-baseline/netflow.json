@@ -1,0 +1,47 @@
+[
+  {
+    "timestamp": "2026-10-15 09:03:00",
+    "source_ip": "10.0.12.5",
+    "destination_ip": "10.0.0.10",
+    "source_port": 51110,
+    "destination_port": 443,
+    "protocol": "TCP",
+    "bytes": 8450
+  },
+  {
+    "timestamp": "2026-10-15 09:15:00",
+    "source_ip": "10.0.12.7",
+    "destination_ip": "10.0.0.10",
+    "source_port": 51230,
+    "destination_port": 443,
+    "protocol": "TCP",
+    "bytes": 7320
+  },
+  {
+    "timestamp": "2026-10-15 09:16:00",
+    "source_ip": "10.0.12.7",
+    "destination_ip": "10.0.0.53",
+    "source_port": 51231,
+    "destination_port": 53,
+    "protocol": "UDP",
+    "bytes": 210
+  },
+  {
+    "timestamp": "2026-10-15 10:06:00",
+    "source_ip": "10.0.12.5",
+    "destination_ip": "10.0.0.80",
+    "source_port": 51406,
+    "destination_port": 80,
+    "protocol": "TCP",
+    "bytes": 15320
+  },
+  {
+    "timestamp": "2026-10-15 13:49:00",
+    "source_ip": "10.0.12.9",
+    "destination_ip": "10.0.0.10",
+    "source_port": 52001,
+    "destination_port": 443,
+    "protocol": "TCP",
+    "bytes": 6600
+  }
+]

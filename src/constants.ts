@@ -10,14 +10,14 @@ export const SEVERITY_COLORS: Record<string, string> = {
 
 export const RISK_ORDER = ['HIGH', 'MEDIUM', 'LOW', 'UNKNOWN'];
 
-export const CHART_TICK = { fontSize: 11, fill: '#94a3b8' };
+export const CHART_TICK = { fontSize: 11, fill: '#7f99a0' };
 
 export const TOOLTIP_STYLE = {
-  background: '#0f172a',
-  border: '1px solid rgba(148, 163, 184, 0.25)',
+  background: '#0a2130',
+  border: '1px solid rgba(39, 233, 181, 0.28)',
   borderRadius: 8,
   fontSize: 12,
-  color: '#e2e8f0',
+  color: '#e9fbf6',
 };
 
-export const CHART_GRID = 'rgba(148, 163, 184, 0.15)';
+export const CHART_GRID = 'rgba(59, 82, 101, 0.28)';

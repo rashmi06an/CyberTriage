@@ -46,7 +46,21 @@ For anyone you share the app with. **Apple Silicon Macs only.**
 > The DMG bundles the analysis engine and sample data — **no Python or Node needed**
 > on the recipient's machine.
 
-Inside the app: **create a case → Load sample data → Run analysis**.
+Inside the app: **sign up (first run) → create a case → Load sample data → Run analysis**.
+
+### Accounts, guided tour & reset
+
+- **First launch** shows a **Welcome screen** with **Log in / Sign up**. Create a
+  local account (username + password, min 6 chars). Accounts are stored **only on
+  this machine** (hashed in the app's local storage) — there is no server or cloud.
+- A brand-new account gets a short **guided tour**. Replay it any time from the
+  **account menu** (top-right) → *Replay guided tour*.
+- The **account menu** also has **Log out** and **Reset entire app**. *Reset*
+  permanently wipes **all cases + evidence + analysis** and **every local account**,
+  returning the app to a fresh install (type `RESET` to confirm).
+- The landing **Home** page is a combined dashboard across *all* cases (cases to
+  date, evidence, artifacts, IOCs, risk posture, recent cases). Per-case stats live
+  on each case's own page.
 
 ---
 
@@ -172,6 +186,24 @@ logs/      auth.log            → failed-login burst, curl download, C2 beacon
 network/   connections.json    → suspicious ports, top talkers, external dests
            periodic_beacon.json→ regular-interval beaconing (possible C2)
 ```
+
+### Scored demo datasets (`sample-data/datasets/`)
+
+Four self-contained, synthetic evidence sets, each tuned to land in a **different
+risk band** so you can demo the whole scoring range. Scores are **deterministic**
+(the same dataset always yields the same number).
+
+| Folder | Score | Severity |
+| --- | --- | --- |
+| `01-benign-baseline` | ~9 | **LOW** |
+| `02-suspicious-insider` | ~42 | **MEDIUM** |
+| `03-malware-infection` | ~70 | **HIGH** |
+| `04-apt-breach` | ~86 | **CRITICAL** |
+
+To load one: **Import evidence** → open one dataset folder → **Cmd+A** to select
+**every file** in it → **Import** → **Run analysis**. Select the individual files
+(not the folder) so logs, captures and files are each fully parsed. Use a fresh
+case per dataset to compare them. See `sample-data/datasets/INDEX.txt` for details.
 
 ---
 

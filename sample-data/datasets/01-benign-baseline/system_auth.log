@@ -1,0 +1,8 @@
+2026-10-15 09:02:11 sshd[2201]: Accepted password for alice from 10.0.12.5 port 51110
+2026-10-15 09:14:48 sshd[2203]: Accepted password for bob from 10.0.12.7 port 51230
+2026-10-15 10:05:02 sshd[2240]: Failed password for alice from 10.0.12.5 port 51402
+2026-10-15 10:05:39 sshd[2242]: Accepted password for alice from 10.0.12.5 port 51405
+2026-10-15 11:31:20 sudo: bob : TTY=pts/0 ; PWD=/home/bob ; COMMAND=/usr/bin/apt update
+2026-10-15 13:48:55 sshd[2501]: Accepted password for carol from 10.0.12.9 port 52001
+2026-10-15 15:22:03 sshd[2610]: Accepted password for alice from 10.0.12.5 port 52440
+2026-10-15 16:50:41 systemd[1]: Started daily backup service.

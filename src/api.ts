@@ -5,6 +5,7 @@ import type {
   DashboardStats,
   EngineState,
   Evidence,
+  GlobalStats,
   IOC,
   NetworkRecord,
   RiskFinding,
@@ -69,6 +70,16 @@ export const listCases = () => call<Case[]>('list_cases');
 export const createCase = (name: string, description: string, investigator: string) =>
   call<Case>('create_case', { name, description, investigator });
 export const getCase = (caseId: string) => call<Case>('get_case', { case_id: caseId });
+export const updateCase = (
+  caseId: string,
+  fields: { name?: string; description?: string; investigator?: string; status?: string }
+) => call<Case>('update_case', { case_id: caseId, ...fields });
+export const deleteCase = (caseId: string) =>
+  call<{ deleted: number; case_id: string }>('delete_case', { case_id: caseId });
+export const deleteCases = (caseIds: string[]) =>
+  call<{ deleted: number; requested: number }>('delete_cases', { case_ids: caseIds });
+export const resetApp = () => call<{ reset: boolean; cleared: Record<string, number> }>('reset_app');
+export const getGlobalStats = () => call<GlobalStats>('get_global_stats');
 export const getEvidence = (caseId: string) => call<Evidence[]>('get_evidence', { case_id: caseId });
 export const importEvidence = (caseId: string, filePath: string) =>
   call<Evidence>('import_evidence', { case_id: caseId, file_path: filePath });

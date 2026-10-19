@@ -5,16 +5,19 @@ import { BrandLogo } from './components/Logo';
 import { EnginePill } from './components/ui';
 import { CyberBackground } from './components/CyberBackground';
 import { TopBar } from './components/TopBar';
+import { Tour } from './components/Tour';
+import { AuthProvider, useAuth } from './AuthContext';
+import Welcome from './pages/Welcome';
 import Cases from './pages/Cases';
 import CaseDetail from './pages/CaseDetail';
-import Dashboard from './pages/Dashboard';
+import Home from './pages/Home';
 import Help from './pages/Help';
 import type { EngineState } from './types';
 
 function Sidebar({ state, onRetry }: { state: EngineState | null; onRetry: () => void }) {
   return (
     <aside className="sidebar">
-      <div className="brand">
+      <div className="brand" data-tour="brand">
         <BrandLogo />
         <div>
           <div className="brand-title">CyberTriage</div>
@@ -22,11 +25,11 @@ function Sidebar({ state, onRetry }: { state: EngineState | null; onRetry: () =>
         </div>
       </div>
 
-      <nav className="nav" aria-label="Primary navigation">
+      <nav className="nav" aria-label="Primary navigation" data-tour="nav">
         <span className="nav-label">Workspace</span>
         <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}>
           <span className="nav-ico" aria-hidden="true">◈</span>
-          Overview
+          Home
         </NavLink>
         <NavLink to="/cases" className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}>
           <span className="nav-ico" aria-hidden="true">▤</span>
@@ -50,7 +53,8 @@ function Sidebar({ state, onRetry }: { state: EngineState | null; onRetry: () =>
   );
 }
 
-export default function App() {
+function Workspace() {
+  const { user, showTour, finishTour } = useAuth();
   const [state, setState] = useState<EngineState | null>(() =>
     hasBridge() ? null : { state: 'error', detail: 'Desktop bridge unavailable — run npm run electron:dev' }
   );
@@ -69,16 +73,19 @@ export default function App() {
       .catch(() => setState({ state: 'error', detail: 'Engine restart failed' }));
   };
 
+  if (!user) {
+    return <Welcome />;
+  }
+
   return (
-    <HashRouter>
-      <CyberBackground />
+    <>
       <div className="app-shell">
         <Sidebar state={state} onRetry={handleRetry} />
         <div className="content-col">
           <TopBar engine={state} />
           <main className="main">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/" element={<Home />} />
               <Route path="/cases" element={<Cases />} />
               <Route path="/cases/:caseId" element={<CaseDetail />} />
               <Route path="/help" element={<Help />} />
@@ -87,6 +94,18 @@ export default function App() {
           </main>
         </div>
       </div>
+      {showTour ? <Tour onFinish={finishTour} /> : null}
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <HashRouter>
+      <CyberBackground />
+      <AuthProvider>
+        <Workspace />
+      </AuthProvider>
     </HashRouter>
   );
 }

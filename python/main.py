@@ -55,6 +55,32 @@ def handle(cmd: dict) -> dict:
             result = analyzer.get_case(payload['case_id'])
             return {'ok': True, 'result': result}
 
+        elif action == 'update_case':
+            result = analyzer.update_case(
+                case_id=payload['case_id'],
+                name=payload.get('name'),
+                description=payload.get('description'),
+                investigator=payload.get('investigator'),
+                status=payload.get('status'),
+            )
+            return {'ok': True, 'result': result}
+
+        elif action == 'delete_case':
+            result = analyzer.delete_case(payload['case_id'])
+            return {'ok': True, 'result': result}
+
+        elif action == 'delete_cases':
+            result = analyzer.delete_cases(payload.get('case_ids', []))
+            return {'ok': True, 'result': result}
+
+        elif action == 'reset_app':
+            result = analyzer.reset_app()
+            return {'ok': True, 'result': result}
+
+        elif action == 'get_global_stats':
+            result = analyzer.get_global_stats()
+            return {'ok': True, 'result': result}
+
         elif action == 'import_evidence':
             result = analyzer.import_evidence(
                 case_id=payload['case_id'],

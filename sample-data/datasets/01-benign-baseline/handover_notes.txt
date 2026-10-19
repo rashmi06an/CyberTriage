@@ -1,0 +1,6 @@
+Shift handover notes - IT Helpdesk
+----------------------------------
+- Printer on 2nd floor back online after driver reinstall.
+- Reminded finance team about password rotation next Monday.
+- Closed ticket #4821 (Outlook profile rebuild).
+- Nothing outstanding for the night shift.

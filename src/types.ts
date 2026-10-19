@@ -153,3 +153,35 @@ export interface EngineState {
   state: 'starting' | 'ready' | 'stopped' | 'error';
   detail: string;
 }
+
+export interface RecentCase {
+  id: string;
+  name: string;
+  investigator: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  risk_score: number | null;
+  risk_severity: string | null;
+  evidence_count: number;
+}
+
+export interface GlobalStats {
+  total_cases: number;
+  analyzed_cases: number;
+  total_evidence: number;
+  total_artifacts: number;
+  total_iocs: number;
+  total_timeline: number;
+  total_network: number;
+  high_severity: number;
+  critical_severity: number;
+  avg_risk_score: number;
+  highest_risk_case: { id: string; name: string; risk_score: number; severity: string } | null;
+  severity_distribution: Record<string, number>;
+  ioc_type_distribution: Record<string, number>;
+  status_distribution: Record<string, number>;
+  risk_band_distribution: Record<string, number>;
+  recent_cases: RecentCase[];
+  cases_over_time: Array<{ date: string; count: number }>;
+}

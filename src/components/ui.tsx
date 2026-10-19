@@ -1,6 +1,50 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { SEVERITY_COLORS } from '../constants';
 import type { EngineState } from '../types';
+
+export function Modal({
+  title,
+  children,
+  onClose,
+  footer,
+  tone,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  footer?: ReactNode;
+  tone?: 'danger';
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div
+        className={`modal${tone ? ` modal-${tone}` : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="modal-head">
+          <h2>{title}</h2>
+          <button type="button" className="modal-close" aria-label="Close" onClick={onClose}>
+            ✕
+          </button>
+        </header>
+        <div className="modal-body">{children}</div>
+        {footer ? <footer className="modal-foot">{footer}</footer> : null}
+      </div>
+    </div>
+  );
+}
 
 export function SeverityBadge({ severity }: { severity?: string | null }) {
   const value = (severity ?? 'UNKNOWN').toUpperCase();

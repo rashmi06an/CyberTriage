@@ -1,0 +1,6 @@
+2026-10-14 02:11:05 sshd[8801]: Failed password for jsmith from 10.0.44.21 port 44101
+2026-10-14 02:11:38 sshd[8802]: Failed password for jsmith from 10.0.44.21 port 44110
+2026-10-14 02:12:19 sshd[8803]: Failed password for admin from 10.0.44.90 port 44155
+2026-10-14 02:13:02 sshd[8804]: Accepted password for jsmith from 10.0.44.21 port 44160
+2026-10-14 03:40:51 sudo: jsmith : COMMAND=/usr/bin/zip -r /tmp/export.zip /srv/finance
+2026-10-14 09:05:22 sshd[9001]: Accepted password for jsmith from 10.0.44.21 port 51009

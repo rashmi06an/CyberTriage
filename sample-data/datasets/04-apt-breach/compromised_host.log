@@ -1,0 +1,11 @@
+2026-10-17 03:00:10 sshd[3300]: Failed password for root from 185.220.101.2 port 46000
+2026-10-17 03:01:11 sshd[3300]: Failed password for root from 185.220.101.2 port 46001
+2026-10-17 03:02:12 sshd[3300]: Failed password for root from 185.220.101.2 port 46002
+2026-10-17 03:03:13 sshd[3300]: Failed password for root from 185.220.101.2 port 46003
+2026-10-17 03:04:14 sshd[3300]: Failed password for root from 185.220.101.2 port 46004
+2026-10-17 03:05:15 sshd[3300]: Failed password for root from 185.220.101.2 port 46005
+2026-10-17 03:06:16 sshd[3300]: Failed password for root from 185.220.101.2 port 46006
+2026-10-17 03:08:55 sshd[3312]: Accepted password for root from 185.220.101.2 port 46099
+2026-10-17 03:10:02 dns: query for malware-c2.xyz -> 185.220.101.1
+2026-10-17 03:10:30 dns: query for evil-domain.tk -> 45.33.32.156
+2026-10-17 03:12:40 http: GET http://malware-c2.xyz/stage2 from 10.0.9.14

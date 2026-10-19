@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { EngineState } from '../types';
+import { AccountMenu } from './AccountMenu';
 
 /**
  * Persistent SOC-style command bar shown above every page. Live UTC + local
@@ -62,6 +63,7 @@ export function TopBar({ engine }: { engine: EngineState | null }) {
           <small>LOCAL</small>
           {local}
         </span>
+        <AccountMenu />
       </div>
     </div>
   );

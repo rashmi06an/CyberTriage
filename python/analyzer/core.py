@@ -63,6 +63,74 @@ class CaseAnalyzer:
         )
         self.db.commit()
 
+    def update_case(self, case_id: str, name: Optional[str] = None, description: Optional[str] = None,
+                    investigator: Optional[str] = None, status: Optional[str] = None) -> Dict:
+        existing = self.get_case(case_id)
+        if not existing:
+            return {'error': f'Case not found: {case_id}'}
+        fields = []
+        values = []
+        if name is not None and name.strip():
+            fields.append('name=?'); values.append(name.strip())
+        if description is not None:
+            fields.append('description=?'); values.append(description.strip())
+        if investigator is not None and investigator.strip():
+            fields.append('investigator=?'); values.append(investigator.strip())
+        if status is not None and status.strip():
+            fields.append('status=?'); values.append(status.strip())
+        if not fields:
+            return existing
+        fields.append('updated_at=?'); values.append(datetime.now().isoformat())
+        values.append(case_id)
+        self.db.execute(f'UPDATE cases SET {", ".join(fields)} WHERE id=?', values)
+        self.db.commit()
+        self._audit(case_id, 'Case updated', f'Fields: {", ".join(f.split("=")[0] for f in fields[:-1])}')
+        return self.get_case(case_id)
+
+    # ─── Case Deletion ──────────────────────────────────────────────────
+
+    _DERIVED_TABLES = ('artifacts', 'ioc_findings', 'timeline_events', 'network_activity',
+                       'risk_findings', 'evidence', 'audit_log')
+
+    def delete_case(self, case_id: str) -> Dict:
+        if not self.get_case(case_id):
+            return {'error': f'Case not found: {case_id}'}
+        for table in self._DERIVED_TABLES:
+            self.db.execute(f'DELETE FROM {table} WHERE case_id=?', (case_id,))
+        self.db.execute('DELETE FROM cases WHERE id=?', (case_id,))
+        self.db.commit()
+        return {'deleted': 1, 'case_id': case_id}
+
+    def delete_cases(self, case_ids: List[str]) -> Dict:
+        deleted = 0
+        for cid in case_ids:
+            if self.get_case(cid):
+                for table in self._DERIVED_TABLES:
+                    self.db.execute(f'DELETE FROM {table} WHERE case_id=?', (cid,))
+                self.db.execute('DELETE FROM cases WHERE id=?', (cid,))
+                deleted += 1
+        self.db.commit()
+        return {'deleted': deleted, 'requested': len(case_ids)}
+
+    def reset_app(self) -> Dict:
+        """Factory reset — wipe every case and all derived data."""
+        counts = {}
+        # Child tables first, then cases last — foreign_keys=ON would otherwise
+        # reject deleting a case that still has evidence/artifacts referencing it.
+        for table in ('artifacts', 'ioc_findings', 'timeline_events', 'network_activity',
+                      'risk_findings', 'evidence', 'audit_log', 'cases'):
+            try:
+                counts[table] = self.db.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
+                self.db.execute(f'DELETE FROM {table}')
+            except Exception:
+                counts[table] = 0
+        self.db.commit()
+        try:
+            self.db.execute('VACUUM')
+        except Exception:
+            pass
+        return {'reset': True, 'cleared': counts}
+
     # ─── Evidence Import ────────────────────────────────────────────────
 
     def import_evidence(self, case_id: str, file_path: str) -> Dict:
@@ -436,6 +504,105 @@ class CaseAnalyzer:
             'severity_distribution': sev_dist,
             'ioc_type_distribution': ioc_dist,
             'timeline_activity': tl_activity,
+        }
+
+    def get_global_stats(self) -> Dict:
+        """Aggregate statistics across every case — powers the Home dashboard."""
+        def scalar(q, params=()):
+            row = self.db.execute(q, params).fetchone()
+            return row[0] if row else 0
+
+        total_cases = scalar('SELECT COUNT(*) FROM cases')
+        total_evidence = scalar('SELECT COUNT(*) FROM evidence')
+        total_artifacts = scalar('SELECT COUNT(*) FROM artifacts')
+        total_iocs = scalar('SELECT COUNT(*) FROM ioc_findings')
+        total_timeline = scalar('SELECT COUNT(*) FROM timeline_events')
+        total_network = scalar('SELECT COUNT(*) FROM network_activity')
+        high_severity = scalar("SELECT COUNT(*) FROM artifacts WHERE severity='HIGH'")
+        critical_severity = scalar("SELECT COUNT(*) FROM artifacts WHERE severity='CRITICAL'")
+        analyzed_cases = scalar("SELECT COUNT(DISTINCT case_id) FROM risk_findings")
+
+        # Severity distribution across all artifacts
+        severity_distribution = {}
+        for row in self.db.execute('SELECT severity, COUNT(*) FROM artifacts GROUP BY severity').fetchall():
+            severity_distribution[row[0]] = row[1]
+
+        # IOC type distribution across all cases
+        ioc_type_distribution = {}
+        for row in self.db.execute('SELECT ioc_type, COUNT(*) FROM ioc_findings GROUP BY ioc_type').fetchall():
+            ioc_type_distribution[row[0]] = row[1]
+
+        # Cases by status
+        status_distribution = {}
+        for row in self.db.execute('SELECT status, COUNT(*) FROM cases GROUP BY status').fetchall():
+            status_distribution[row[0]] = row[1]
+
+        # Latest risk score per case
+        latest_risk = {}
+        for row in self.db.execute(
+            'SELECT case_id, risk_score, severity, MAX(created_at) FROM risk_findings GROUP BY case_id'
+        ).fetchall():
+            latest_risk[row[0]] = {'risk_score': row[1], 'severity': row[2]}
+
+        scores = [v['risk_score'] for v in latest_risk.values()]
+        avg_risk = round(sum(scores) / len(scores), 1) if scores else 0
+
+        # Risk-band distribution (by latest per-case severity)
+        risk_band_distribution = {}
+        for v in latest_risk.values():
+            sev = v.get('severity') or 'UNKNOWN'
+            risk_band_distribution[sev] = risk_band_distribution.get(sev, 0) + 1
+
+        # Recent cases (newest first) with their latest risk
+        recent_cases = []
+        for row in self.db.execute(
+            'SELECT id, name, investigator, status, created_at, updated_at FROM cases ORDER BY created_at DESC LIMIT 8'
+        ).fetchall():
+            c = dict(row)
+            risk = latest_risk.get(c['id'], {})
+            c['risk_score'] = risk.get('risk_score')
+            c['risk_severity'] = risk.get('severity')
+            evc = scalar('SELECT COUNT(*) FROM evidence WHERE case_id=?', (c['id'],))
+            c['evidence_count'] = evc
+            recent_cases.append(c)
+
+        # Cases created per day ("uploaded till date")
+        cases_over_time = []
+        for row in self.db.execute(
+            "SELECT substr(created_at,1,10) AS day, COUNT(*) FROM cases GROUP BY day ORDER BY day"
+        ).fetchall():
+            cases_over_time.append({'date': row[0], 'count': row[1]})
+
+        highest = None
+        if latest_risk:
+            top_id = max(latest_risk, key=lambda k: latest_risk[k]['risk_score'])
+            top_case = self.get_case(top_id)
+            if top_case:
+                highest = {
+                    'id': top_id,
+                    'name': top_case.get('name', ''),
+                    'risk_score': latest_risk[top_id]['risk_score'],
+                    'severity': latest_risk[top_id]['severity'],
+                }
+
+        return {
+            'total_cases': total_cases,
+            'analyzed_cases': analyzed_cases,
+            'total_evidence': total_evidence,
+            'total_artifacts': total_artifacts,
+            'total_iocs': total_iocs,
+            'total_timeline': total_timeline,
+            'total_network': total_network,
+            'high_severity': high_severity,
+            'critical_severity': critical_severity,
+            'avg_risk_score': avg_risk,
+            'highest_risk_case': highest,
+            'severity_distribution': severity_distribution,
+            'ioc_type_distribution': ioc_type_distribution,
+            'status_distribution': status_distribution,
+            'risk_band_distribution': risk_band_distribution,
+            'recent_cases': recent_cases,
+            'cases_over_time': cases_over_time,
         }
 
     # ─── Reports ────────────────────────────────────────────────────────
