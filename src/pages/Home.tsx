@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { BRIDGE_HINT, getGlobalStats, hasBridge } from '../api';
 import { CHART_GRID, CHART_TICK, SEV_ORDER, SEVERITY_COLORS, TOOLTIP_STYLE } from '../constants';
-import { EmptyState, NoticeBar, Panel, SeverityBadge, Spinner, StatCard } from '../components/ui';
+import { Avatar, EmptyState, NoticeBar, Panel, SeverityBadge, Spinner, StatCard } from '../components/ui';
 import { errorMessage, formatDateTime, statusSlug } from '../format';
 import { useAuth } from '../AuthContext';
 import type { GlobalStats } from '../types';
@@ -27,7 +27,7 @@ const QUICK_ACTIONS = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isFirstVisit } = useAuth();
   const [stats, setStats] = useState<GlobalStats | null>(null);
   const [error, setError] = useState('');
   const bridgeOk = hasBridge();
@@ -74,15 +74,19 @@ export default function Home() {
   return (
     <div className="page home-page">
       <section className="home-hero" data-tour="home-hero">
-        <div className="home-hero-text">
-          <p className="home-eyebrow">{greeting}</p>
-          <h1 className="home-title">
-            Welcome back, <span className="accent-text">{firstName}</span>
-          </h1>
-          <p className="page-sub">
-            Your investigation command centre — a live roll-up of every case, artifact and indicator triaged
-            on this workstation.
-          </p>
+        <div className="home-hero-left">
+          <Avatar name={user?.displayName ?? 'U'} src={user?.avatar} size={56} className="home-avatar" />
+          <div className="home-hero-text">
+            <p className="home-eyebrow">{greeting}</p>
+            <h1 className="home-title">
+              {isFirstVisit ? 'Welcome' : 'Welcome back'}, <span className="accent-text">{firstName}</span>
+            </h1>
+            <p className="page-sub">
+              {isFirstVisit
+                ? 'Let’s set up your first investigation — create a case, then import evidence or load a sample dataset.'
+                : 'Your investigation command centre — a live roll-up of every case, artifact and indicator triaged on this workstation.'}
+            </p>
+          </div>
         </div>
         <button className="btn btn-primary btn-lg" type="button" onClick={() => navigate('/cases')}>
           ＋ New case

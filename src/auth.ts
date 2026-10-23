@@ -17,11 +17,13 @@ export interface StoredUser {
   salt: string;
   hash: string;
   createdAt: string;
+  avatar?: string; // small base64 data URL
 }
 
 export interface SessionUser {
   username: string;
   displayName: string;
+  avatar?: string;
 }
 
 const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,24}$/;
@@ -89,10 +91,11 @@ export function currentSession(): SessionUser | null {
   try {
     const parsed = JSON.parse(raw) as SessionUser;
     if (!parsed?.username) return null;
-    // Ensure the account still exists (e.g. after a reset).
+    // Ensure the account still exists (e.g. after a reset) and use the freshest profile data.
     const users = loadUsers();
-    if (!users.some((u) => u.username.toLowerCase() === parsed.username.toLowerCase())) return null;
-    return parsed;
+    const stored = users.find((u) => u.username.toLowerCase() === parsed.username.toLowerCase());
+    if (!stored) return null;
+    return { username: stored.username, displayName: stored.displayName, avatar: stored.avatar };
   } catch {
     return null;
   }
@@ -102,7 +105,8 @@ export async function signup(
   rawUsername: string,
   password: string,
   confirm: string,
-  displayName?: string
+  displayName?: string,
+  avatar?: string
 ): Promise<SessionUser> {
   const username = rawUsername.trim();
   if (!username) throw new AuthError('Choose a username.');
@@ -115,7 +119,7 @@ export async function signup(
 
   const users = loadUsers();
   if (users.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
-    throw new AuthError('That username is already taken.');
+    throw new AuthError('That username already exists on this machine. Pick a different one so each account keeps its own cases.');
   }
 
   const salt = randomHex();
@@ -126,11 +130,12 @@ export async function signup(
     salt,
     hash,
     createdAt: new Date().toISOString(),
+    avatar: avatar || undefined,
   };
   users.push(user);
   saveUsers(users);
 
-  const session: SessionUser = { username: user.username, displayName: user.displayName };
+  const session: SessionUser = { username: user.username, displayName: user.displayName, avatar: user.avatar };
   safeSet(SESSION_KEY, JSON.stringify(session));
   return session;
 }
@@ -146,7 +151,35 @@ export async function login(rawUsername: string, password: string): Promise<Sess
   const hash = await hashPassword(user.salt, password);
   if (hash !== user.hash) throw new AuthError('Incorrect password.');
 
-  const session: SessionUser = { username: user.username, displayName: user.displayName };
+  const session: SessionUser = { username: user.username, displayName: user.displayName, avatar: user.avatar };
+  safeSet(SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+
+/** Check whether a username is already registered (case-insensitive). */
+export function usernameExists(rawUsername: string): boolean {
+  const username = rawUsername.trim().toLowerCase();
+  if (!username) return false;
+  return loadUsers().some((u) => u.username.toLowerCase() === username);
+}
+
+/** Update the signed-in user's profile (display name and/or picture). Returns the updated session. */
+export function updateProfile(
+  username: string,
+  updates: { displayName?: string; avatar?: string | null }
+): SessionUser | null {
+  const users = loadUsers();
+  const user = users.find((u) => u.username.toLowerCase() === username.toLowerCase());
+  if (!user) return null;
+  if (updates.displayName !== undefined) {
+    const name = updates.displayName.trim().slice(0, 40);
+    user.displayName = name || user.username;
+  }
+  if (updates.avatar !== undefined) {
+    user.avatar = updates.avatar || undefined;
+  }
+  saveUsers(users);
+  const session: SessionUser = { username: user.username, displayName: user.displayName, avatar: user.avatar };
   safeSet(SESSION_KEY, JSON.stringify(session));
   return session;
 }

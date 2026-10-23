@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   BRIDGE_HINT,
@@ -19,7 +19,9 @@ import {
   runAnalysis,
   saveReportDialog,
 } from '../api';
-import { FilterChips, EmptyState, NoticeBar, Panel, ScoreGauge, SeverityBadge, Spinner, StatCard } from '../components/ui';
+import { FilterChips, EmptyState, InsightCard, NoticeBar, Panel, ScoreGauge, SeverityBadge, Spinner, StatCard } from '../components/ui';
+import type { Insight } from '../components/ui';
+import { ExportMenu } from '../components/ExportMenu';
 import { NetworkGraph } from '../components/NetworkGraph';
 import { RISK_ORDER, SEV_ORDER } from '../constants';
 import { errorMessage, formatBytes, formatDateTime, formatTime, shortHash, statusSlug } from '../format';
@@ -91,8 +93,17 @@ export default function CaseDetail() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const tabsRef = useRef<HTMLElement>(null);
 
   const bridgeOk = hasBridge();
+
+  const jumpTo = (target: Tab, filter?: string) => {
+    setTab(target);
+    setSearch('');
+    if (target === 'iocs') setRiskFilter(filter ?? 'ALL');
+    else setSevFilter(filter ?? 'ALL');
+    requestAnimationFrame(() => tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
 
   const refresh = useCallback(() => {
     if (!bridgeOk || !caseId) return Promise.resolve();
@@ -275,6 +286,139 @@ export default function CaseDetail() {
     risk: riskFindings.length,
   };
 
+  const analyzed = riskFindings.length > 0;
+  const latestRiskVal = riskFindings[0];
+
+  const { insight, insightTone } = useMemo<{ insight: Insight; insightTone: string }>(() => {
+    const n = (v: number | undefined) => v ?? 0;
+    const crit = n(sevCounts.CRITICAL);
+    const high = n(sevCounts.HIGH);
+    const med = n(sevCounts.MEDIUM);
+    const low = n(sevCounts.LOW) + n(sevCounts.UNKNOWN);
+    const iHigh = n(iocCounts.HIGH);
+    const iMed = n(iocCounts.MEDIUM);
+    const iLow = n(iocCounts.LOW) + n(iocCounts.UNKNOWN);
+    const netAnoms = network.filter((r) => r.anomaly_flag).length;
+    const importHint = 'Use “Import evidence” or “Load sample data”, then click “Run analysis”.';
+
+    let ins: Insight;
+    let tone = 'ok';
+
+    if (tab === 'evidence') {
+      if (evidence.length === 0) {
+        ins = {
+          summary: 'This page lists every file or folder you bring into the case. Nothing has been imported yet.',
+          good: [],
+          issues: [],
+          missing: { reason: 'No evidence has been imported into this case.', fixes: [importHint, 'You can import loose files, whole folders, or load a bundled demo dataset.'] },
+        };
+        tone = 'warn';
+      } else {
+        ins = {
+          summary: `This page is your evidence register: ${evidence.length} item(s) imported. Each file is fingerprinted with SHA-256 and MD5 so you can prove it wasn’t altered.`,
+          good: ['All imported items are hashed for integrity.', analyzed ? 'Evidence has been analysed.' : 'Ready for analysis.'],
+          issues: analyzed ? [] : ['Analysis hasn’t run yet — click “Run analysis” to generate findings.'],
+        };
+        tone = analyzed ? 'ok' : 'warn';
+      }
+    } else if (tab === 'artifacts') {
+      if (!analyzed) {
+        ins = { summary: 'File artifacts (suspicious extensions, hidden/executable files, ML anomaly scores) appear after analysis.', good: [], issues: [], missing: { reason: 'No analysis has been run for this case yet.', fixes: [importHint] } };
+        tone = 'warn';
+      } else {
+        ins = {
+          summary: `Analysed ${artifacts.length} file artifact(s): ${crit} critical, ${high} high, ${med} medium, ${low} low-risk. Higher severity means more suspicious traits (e.g. a .pdf.exe double extension).`,
+          good: crit + high === 0 ? ['No high or critical files were detected.'] : low > 0 ? [`${low} file(s) show no suspicious traits.`] : [],
+          issues: [
+            ...(crit > 0 ? [`${crit} CRITICAL file(s) — review these first (likely disguised executables).`] : []),
+            ...(high > 0 ? [`${high} HIGH-severity file(s) — suspicious scripts or extensions.`] : []),
+          ],
+        };
+        tone = crit > 0 ? 'danger' : high > 0 ? 'warn' : 'ok';
+      }
+    } else if (tab === 'iocs') {
+      if (!analyzed) {
+        ins = { summary: 'Indicators of compromise (IPs, URLs, domains, file hashes) are extracted during analysis.', good: [], issues: [], missing: { reason: 'No analysis has been run for this case yet.', fixes: [importHint] } };
+        tone = 'warn';
+      } else if (iocs.length === 0) {
+        ins = {
+          summary: 'No indicators of compromise were extracted from this evidence.',
+          good: [],
+          issues: [],
+          missing: {
+            reason: 'Your evidence contained no readable IPs, URLs, domains or hashes — this is common when the files are binaries (e.g. .exe) with no text.',
+            fixes: ['Add text-based evidence: logs, scripts (.ps1/.sh), config files, or a network capture (JSON/CSV).', 'Re-run analysis after importing them.'],
+          },
+        };
+        tone = 'ok';
+      } else {
+        ins = {
+          summary: `Extracted ${iocs.length} indicator(s): ${iHigh} high-risk, ${iMed} medium, ${iLow} informational. High-risk entries match known-bad IPs/domains.`,
+          good: ['Every indicator links back to the source file it came from.', iHigh === 0 ? 'No known-malicious indicators matched.' : ''].filter(Boolean),
+          issues: iHigh > 0 ? [`${iHigh} high-risk indicator(s) — pivot your investigation on these.`] : [],
+        };
+        tone = iHigh > 0 ? 'danger' : 'ok';
+      }
+    } else if (tab === 'timeline') {
+      if (!analyzed) {
+        ins = { summary: 'The timeline reconstructs events in chronological order after analysis.', good: [], issues: [], missing: { reason: 'No analysis has been run for this case yet.', fixes: [importHint] } };
+        tone = 'warn';
+      } else if (timeline.length === 0) {
+        ins = {
+          summary: 'No timeline events were built.',
+          good: [],
+          issues: [],
+          missing: { reason: 'None of your evidence contained parseable timestamps, so there is nothing to place on a timeline.', fixes: ['Import logs or files that include dates/times (e.g. auth.log).', 'Re-run analysis.'] },
+        };
+        tone = 'warn';
+      } else {
+        const flagged = timeline.filter((e) => e.ioc_related || ['HIGH', 'CRITICAL'].includes((e.severity ?? '').toUpperCase())).length;
+        ins = {
+          summary: `${timeline.length} event(s) reconstructed across ${timelineDays.length} day(s). Use this to understand the order an incident unfolded in.`,
+          good: ['Events are ordered chronologically for reconstruction.'],
+          issues: flagged > 0 ? [`${flagged} event(s) are IOC-related or high severity — worth a closer look.`] : [],
+        };
+        tone = flagged > 0 ? 'warn' : 'ok';
+      }
+    } else if (tab === 'network') {
+      if (network.length === 0) {
+        ins = {
+          summary: 'This page maps network talkers and flags suspicious connections — but there is no network data in this case.',
+          good: [],
+          issues: [],
+          missing: {
+            reason: 'Your evidence doesn’t include a network capture, so no connections, ports or beaconing can be shown.',
+            fixes: ['Add a connections export — a JSON or CSV with source/destination IPs and ports (e.g. connections.json).', 'Re-run analysis to build the topology map and flag suspicious ports.'],
+          },
+        };
+        tone = 'warn';
+      } else {
+        const dests = new Set(network.map((r) => r.destination_ip)).size;
+        ins = {
+          summary: `${network.length} connection record(s) to ${dests} destination(s). The map highlights top talkers and external destinations.`,
+          good: netAnoms === 0 ? ['No connections were flagged as anomalous.'] : ['Topology map shows talkers and external destinations.'],
+          issues: netAnoms > 0 ? [`${netAnoms} flagged connection(s) — suspicious ports or high-frequency beaconing (possible C2).`] : [],
+        };
+        tone = netAnoms > 0 ? 'danger' : 'ok';
+      }
+    } else {
+      // risk
+      if (!analyzed || !latestRiskVal) {
+        ins = { summary: 'The composite risk score (0–100) combines IOCs, file findings, log patterns, network anomalies and the ML model.', good: [], issues: [], missing: { reason: 'No risk score has been computed yet.', fixes: [importHint] } };
+        tone = 'warn';
+      } else {
+        const sev = (latestRiskVal.severity ?? 'LOW').toUpperCase();
+        ins = {
+          summary: `Overall case risk is ${latestRiskVal.risk_score}/100 — ${sev}. This blends indicators, suspicious files, log patterns, network anomalies and an ML anomaly score.`,
+          good: [`${(latestRiskVal.recommendations ?? []).length} recommended next step(s) generated.`, sev === 'LOW' ? 'Nothing critical stands out.' : ''].filter(Boolean),
+          issues: (latestRiskVal.reasons ?? []).slice(0, 3),
+        };
+        tone = sev === 'CRITICAL' || sev === 'HIGH' ? 'danger' : sev === 'MEDIUM' ? 'warn' : 'ok';
+      }
+    }
+    return { insight: ins, insightTone: tone };
+  }, [tab, evidence.length, artifacts.length, iocs.length, timeline, timelineDays.length, network, sevCounts, iocCounts, analyzed, latestRiskVal]);
+
   if (!bridgeOk) {
     return (
       <div className="page">
@@ -350,26 +494,24 @@ export default function CaseDetail() {
           {caseData.description ? <p className="case-desc">{caseData.description}</p> : null}
         </div>
         <div className="toolbar">
-          <button className="btn" type="button" disabled={busy !== ''} onClick={() => void handleImport()}>
-            {busy === 'import' ? 'Importing…' : 'Import evidence'}
-          </button>
-          <button className="btn" type="button" disabled={busy !== ''} onClick={() => void handleSample()}>
-            {busy === 'sample' ? 'Loading…' : 'Load sample data'}
-          </button>
+          {evidence.length === 0 ? (
+            <>
+              <button className="btn" type="button" disabled={busy !== ''} onClick={() => void handleImport()}>
+                {busy === 'import' ? 'Importing…' : 'Import evidence'}
+              </button>
+              <button className="btn" type="button" disabled={busy !== ''} onClick={() => void handleSample()}>
+                {busy === 'sample' ? 'Loading…' : 'Load sample data'}
+              </button>
+            </>
+          ) : (
+            <span className="evidence-locked" title="Each case holds one evidence set. Delete this case to start over with different evidence.">
+              ✓ Evidence loaded
+            </span>
+          )}
           <button className="btn btn-primary" type="button" disabled={busy !== ''} onClick={() => void handleAnalyze()}>
             {busy === 'analyze' ? 'Analyzing…' : 'Run analysis'}
           </button>
-          {(['pdf', 'json', 'csv'] as const).map((format) => (
-            <button
-              key={format}
-              className="btn"
-              type="button"
-              disabled={busy !== ''}
-              onClick={() => void handleExport(format)}
-            >
-              {busy === `export-${format}` ? 'Exporting…' : `Export ${format.toUpperCase()}`}
-            </button>
-          ))}
+          <ExportMenu busy={busy} disabled={busy !== ''} onExport={(format) => void handleExport(format)} />
         </div>
       </header>
 
@@ -389,16 +531,16 @@ export default function CaseDetail() {
 
       {stats ? (
         <div className="stat-grid">
-          <StatCard label="Evidence items" value={stats.evidence_count} />
-          <StatCard label="Artifacts" value={stats.artifact_count} />
-          <StatCard label="IOC findings" value={stats.ioc_count} tone={stats.ioc_count > 0 ? 'warn' : undefined} />
-          <StatCard label="Timeline events" value={stats.timeline_events} />
-          <StatCard label="High severity" value={stats.high_risk_count} tone="orange" />
-          <StatCard label="Critical severity" value={stats.critical_count} tone="red" />
+          <StatCard label="Evidence items" value={stats.evidence_count} onClick={() => jumpTo('evidence')} hint="View evidence" />
+          <StatCard label="Artifacts" value={stats.artifact_count} onClick={() => jumpTo('artifacts')} hint="View artifacts" />
+          <StatCard label="IOC findings" value={stats.ioc_count} tone={stats.ioc_count > 0 ? 'warn' : undefined} onClick={() => jumpTo('iocs')} hint="View IOCs" />
+          <StatCard label="Timeline events" value={stats.timeline_events} onClick={() => jumpTo('timeline')} hint="View timeline" />
+          <StatCard label="High severity" value={stats.high_risk_count} tone="orange" onClick={() => jumpTo('artifacts', 'HIGH')} hint="View high-severity artifacts" />
+          <StatCard label="Critical severity" value={stats.critical_count} tone="red" onClick={() => jumpTo('artifacts', 'CRITICAL')} hint="View critical artifacts" />
         </div>
       ) : null}
 
-      <nav className="tabs">
+      <nav className="tabs" ref={tabsRef}>
         {TABS.map((entry) => (
           <button
             key={entry}
@@ -411,6 +553,8 @@ export default function CaseDetail() {
           </button>
         ))}
       </nav>
+
+      <InsightCard insight={insight} tone={insightTone} />
 
       {tab === 'artifacts' || tab === 'iocs' || tab === 'timeline' ? (
         <div className="filter-row">

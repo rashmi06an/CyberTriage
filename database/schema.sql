@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS cases (
   name TEXT NOT NULL,
   description TEXT,
   investigator TEXT,
+  owner TEXT DEFAULT '',
   status TEXT DEFAULT 'Open',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL

@@ -1,3 +1,4 @@
+import { currentSession } from './auth';
 import type {
   AnalysisResult,
   Artifact,
@@ -66,9 +67,14 @@ export const pickEvidence = () => bridge().pickEvidence();
 export const saveReportDialog = (defaultName: string) => bridge().saveReportDialog(defaultName);
 export const revealPath = (targetPath: string) => bridge().revealPath(targetPath);
 
-export const listCases = () => call<Case[]>('list_cases');
+/** The username of the signed-in account, used to scope data to its owner. */
+function ownerId(): string {
+  return currentSession()?.username ?? '';
+}
+
+export const listCases = () => call<Case[]>('list_cases', { owner: ownerId() });
 export const createCase = (name: string, description: string, investigator: string) =>
-  call<Case>('create_case', { name, description, investigator });
+  call<Case>('create_case', { name, description, investigator, owner: ownerId() });
 export const getCase = (caseId: string) => call<Case>('get_case', { case_id: caseId });
 export const updateCase = (
   caseId: string,
@@ -79,7 +85,7 @@ export const deleteCase = (caseId: string) =>
 export const deleteCases = (caseIds: string[]) =>
   call<{ deleted: number; requested: number }>('delete_cases', { case_ids: caseIds });
 export const resetApp = () => call<{ reset: boolean; cleared: Record<string, number> }>('reset_app');
-export const getGlobalStats = () => call<GlobalStats>('get_global_stats');
+export const getGlobalStats = () => call<GlobalStats>('get_global_stats', { owner: ownerId() });
 export const getEvidence = (caseId: string) => call<Evidence[]>('get_evidence', { case_id: caseId });
 export const importEvidence = (caseId: string, filePath: string) =>
   call<Evidence>('import_evidence', { case_id: caseId, file_path: filePath });

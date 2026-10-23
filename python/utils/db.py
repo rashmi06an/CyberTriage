@@ -20,7 +20,20 @@ def init_db(db_path: str, schema_path: str | None = None) -> sqlite3.Connection:
         with open(schema_path, 'r', encoding='utf-8') as f:
             conn.executescript(f.read())
     conn.commit()
+
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Lightweight, idempotent migrations for databases created before a column existed."""
+    try:
+        cols = [row[1] for row in conn.execute("PRAGMA table_info(cases)").fetchall()]
+        if 'owner' not in cols:
+            conn.execute("ALTER TABLE cases ADD COLUMN owner TEXT DEFAULT ''")
+            conn.commit()
+    except Exception:
+        pass
 
 
 def row_to_dict(row) -> dict:

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { SEVERITY_COLORS } from '../constants';
 import type { EngineState } from '../types';
@@ -24,7 +25,9 @@ export function Modal({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // Rendered through a portal to <body> so the fixed overlay escapes any ancestor
+  // with backdrop-filter/transform (e.g. the top bar), which would otherwise clip it.
+  return createPortal(
     <div className="modal-overlay" onMouseDown={onClose}>
       <div
         className={`modal${tone ? ` modal-${tone}` : ''}`}
@@ -42,7 +45,36 @@ export function Modal({
         <div className="modal-body">{children}</div>
         {footer ? <footer className="modal-foot">{footer}</footer> : null}
       </div>
-    </div>
+    </div>,
+    document.body
+  );
+}
+
+export function Avatar({
+  name,
+  src,
+  size = 26,
+  className,
+}: {
+  name: string;
+  src?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  const initials =
+    name
+      .split(/\s+/)
+      .map((p) => p[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || 'U';
+  return (
+    <span
+      className={`avatar${className ? ` ${className}` : ''}`}
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}
+    >
+      {src ? <img src={src} alt="" /> : initials}
+    </span>
   );
 }
 
@@ -56,9 +88,31 @@ export function PriorityBadge({ priority }: { priority?: string }) {
   return <span className={`badge prio-${value.toLowerCase()}`}>{value}</span>;
 }
 
-export function StatCard({ label, value, tone }: { label: string; value: number | string; tone?: string }) {
+export function StatCard({
+  label,
+  value,
+  tone,
+  onClick,
+  hint,
+}: {
+  label: string;
+  value: number | string;
+  tone?: string;
+  onClick?: () => void;
+  hint?: string;
+}) {
+  const className = `stat-card${tone ? ` tone-${tone}` : ''}${onClick ? ' stat-card-link' : ''}`;
+  if (onClick) {
+    return (
+      <button type="button" className={className} onClick={onClick} title={hint}>
+        <div className="stat-value">{value}</div>
+        <div className="stat-label">{label}</div>
+        {hint ? <span className="stat-jump" aria-hidden="true">→</span> : null}
+      </button>
+    );
+  }
   return (
-    <div className={`stat-card${tone ? ` tone-${tone}` : ''}`}>
+    <div className={className}>
       <div className="stat-value">{value}</div>
       <div className="stat-label">{label}</div>
     </div>
@@ -85,6 +139,69 @@ export function Panel({
         </header>
       ) : null}
       <div className="panel-body">{children}</div>
+    </section>
+  );
+}
+
+export interface Insight {
+  summary: string;
+  good: string[];
+  issues: string[];
+  missing?: { reason: string; fixes: string[] };
+}
+
+export function InsightCard({ insight, tone }: { insight: Insight; tone?: string }) {
+  return (
+    <section className={`insight${tone ? ` insight-${tone}` : ''}`}>
+      <div className="insight-head">
+        <span className="insight-ico" aria-hidden="true">ⓘ</span>
+        <span className="insight-what">What this page is telling you</span>
+      </div>
+      <p className="insight-summary">{insight.summary}</p>
+
+      {insight.missing ? (
+        <div className="insight-missing">
+          <div className="insight-missing-reason">
+            <span className="insight-label insight-label-warn">Not available</span>
+            {insight.missing.reason}
+          </div>
+          {insight.missing.fixes.length > 0 ? (
+            <div className="insight-fixes">
+              <span className="insight-label">Suggestions &amp; fixes</span>
+              <ul>
+                {insight.missing.fixes.map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {insight.issues.length > 0 || insight.good.length > 0 ? (
+        <div className="insight-cols">
+          {insight.issues.length > 0 ? (
+            <div className="insight-col">
+              <span className="insight-label insight-label-bad">Needs attention</span>
+              <ul>
+                {insight.issues.map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {insight.good.length > 0 ? (
+            <div className="insight-col">
+              <span className="insight-label insight-label-ok">Looks OK</span>
+              <ul>
+                {insight.good.map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

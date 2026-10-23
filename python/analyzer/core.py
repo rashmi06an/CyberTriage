@@ -37,19 +37,26 @@ class CaseAnalyzer:
 
     # ─── Case Management ───────────────────────────────────────────────
 
-    def create_case(self, name: str, description: str = '', investigator: str = 'Student Investigator') -> Dict:
+    def create_case(self, name: str, description: str = '', investigator: str = 'Student Investigator',
+                    owner: str = '') -> Dict:
         now = datetime.now().isoformat()
         case_id = f'CT-{datetime.now().strftime("%Y")}-{str(uuid.uuid4())[:6].upper()}'
         self.db.execute(
-            'INSERT INTO cases (id, name, description, investigator, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?)',
-            (case_id, name, description, investigator, 'Open', now, now)
+            'INSERT INTO cases (id, name, description, investigator, owner, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)',
+            (case_id, name, description, investigator, owner or '', 'Open', now, now)
         )
         self.db.commit()
         self._audit(case_id, 'Case created', f'Name: {name}')
         return self.get_case(case_id)
 
-    def list_cases(self) -> List[Dict]:
-        rows = self.db.execute('SELECT * FROM cases ORDER BY created_at DESC').fetchall()
+    def list_cases(self, owner: Optional[str] = None) -> List[Dict]:
+        """List cases. When an owner is given, only that account's cases are returned."""
+        if owner:
+            rows = self.db.execute(
+                'SELECT * FROM cases WHERE owner=? ORDER BY created_at DESC', (owner,)
+            ).fetchall()
+        else:
+            rows = self.db.execute('SELECT * FROM cases ORDER BY created_at DESC').fetchall()
         return rows_to_list(rows)
 
     def get_case(self, case_id: str) -> Dict:
@@ -506,41 +513,64 @@ class CaseAnalyzer:
             'timeline_activity': tl_activity,
         }
 
-    def get_global_stats(self) -> Dict:
-        """Aggregate statistics across every case — powers the Home dashboard."""
+    def get_global_stats(self, owner: Optional[str] = None) -> Dict:
+        """Aggregate statistics for a user's cases — powers the Home dashboard.
+
+        When an owner is given, every metric is scoped to the cases that account
+        owns, so a brand-new account starts with an empty dashboard.
+        """
+        # Case ids visible to this request.
+        if owner:
+            owned_ids = [r[0] for r in self.db.execute('SELECT id FROM cases WHERE owner=?', (owner,)).fetchall()]
+        else:
+            owned_ids = [r[0] for r in self.db.execute('SELECT id FROM cases').fetchall()]
+
+        empty = {
+            'total_cases': 0, 'analyzed_cases': 0, 'total_evidence': 0, 'total_artifacts': 0,
+            'total_iocs': 0, 'total_timeline': 0, 'total_network': 0, 'high_severity': 0,
+            'critical_severity': 0, 'avg_risk_score': 0, 'highest_risk_case': None,
+            'severity_distribution': {}, 'ioc_type_distribution': {}, 'status_distribution': {},
+            'risk_band_distribution': {}, 'recent_cases': [], 'cases_over_time': [],
+        }
+        if not owned_ids:
+            return empty
+
+        ph = ','.join('?' * len(owned_ids))
+
         def scalar(q, params=()):
             row = self.db.execute(q, params).fetchone()
             return row[0] if row else 0
 
-        total_cases = scalar('SELECT COUNT(*) FROM cases')
-        total_evidence = scalar('SELECT COUNT(*) FROM evidence')
-        total_artifacts = scalar('SELECT COUNT(*) FROM artifacts')
-        total_iocs = scalar('SELECT COUNT(*) FROM ioc_findings')
-        total_timeline = scalar('SELECT COUNT(*) FROM timeline_events')
-        total_network = scalar('SELECT COUNT(*) FROM network_activity')
-        high_severity = scalar("SELECT COUNT(*) FROM artifacts WHERE severity='HIGH'")
-        critical_severity = scalar("SELECT COUNT(*) FROM artifacts WHERE severity='CRITICAL'")
-        analyzed_cases = scalar("SELECT COUNT(DISTINCT case_id) FROM risk_findings")
+        total_cases = len(owned_ids)
+        total_evidence = scalar(f'SELECT COUNT(*) FROM evidence WHERE case_id IN ({ph})', owned_ids)
+        total_artifacts = scalar(f'SELECT COUNT(*) FROM artifacts WHERE case_id IN ({ph})', owned_ids)
+        total_iocs = scalar(f'SELECT COUNT(*) FROM ioc_findings WHERE case_id IN ({ph})', owned_ids)
+        total_timeline = scalar(f'SELECT COUNT(*) FROM timeline_events WHERE case_id IN ({ph})', owned_ids)
+        total_network = scalar(f'SELECT COUNT(*) FROM network_activity WHERE case_id IN ({ph})', owned_ids)
+        high_severity = scalar(f"SELECT COUNT(*) FROM artifacts WHERE severity='HIGH' AND case_id IN ({ph})", owned_ids)
+        critical_severity = scalar(f"SELECT COUNT(*) FROM artifacts WHERE severity='CRITICAL' AND case_id IN ({ph})", owned_ids)
+        analyzed_cases = scalar(f"SELECT COUNT(DISTINCT case_id) FROM risk_findings WHERE case_id IN ({ph})", owned_ids)
 
-        # Severity distribution across all artifacts
+        # Severity distribution across the owner's artifacts
         severity_distribution = {}
-        for row in self.db.execute('SELECT severity, COUNT(*) FROM artifacts GROUP BY severity').fetchall():
+        for row in self.db.execute(f'SELECT severity, COUNT(*) FROM artifacts WHERE case_id IN ({ph}) GROUP BY severity', owned_ids).fetchall():
             severity_distribution[row[0]] = row[1]
 
-        # IOC type distribution across all cases
+        # IOC type distribution
         ioc_type_distribution = {}
-        for row in self.db.execute('SELECT ioc_type, COUNT(*) FROM ioc_findings GROUP BY ioc_type').fetchall():
+        for row in self.db.execute(f'SELECT ioc_type, COUNT(*) FROM ioc_findings WHERE case_id IN ({ph}) GROUP BY ioc_type', owned_ids).fetchall():
             ioc_type_distribution[row[0]] = row[1]
 
         # Cases by status
         status_distribution = {}
-        for row in self.db.execute('SELECT status, COUNT(*) FROM cases GROUP BY status').fetchall():
+        for row in self.db.execute(f'SELECT status, COUNT(*) FROM cases WHERE id IN ({ph}) GROUP BY status', owned_ids).fetchall():
             status_distribution[row[0]] = row[1]
 
         # Latest risk score per case
         latest_risk = {}
         for row in self.db.execute(
-            'SELECT case_id, risk_score, severity, MAX(created_at) FROM risk_findings GROUP BY case_id'
+            f'SELECT case_id, risk_score, severity, MAX(created_at) FROM risk_findings WHERE case_id IN ({ph}) GROUP BY case_id',
+            owned_ids
         ).fetchall():
             latest_risk[row[0]] = {'risk_score': row[1], 'severity': row[2]}
 
@@ -556,20 +586,21 @@ class CaseAnalyzer:
         # Recent cases (newest first) with their latest risk
         recent_cases = []
         for row in self.db.execute(
-            'SELECT id, name, investigator, status, created_at, updated_at FROM cases ORDER BY created_at DESC LIMIT 8'
+            f'SELECT id, name, investigator, status, created_at, updated_at FROM cases WHERE id IN ({ph}) ORDER BY created_at DESC LIMIT 8',
+            owned_ids
         ).fetchall():
             c = dict(row)
             risk = latest_risk.get(c['id'], {})
             c['risk_score'] = risk.get('risk_score')
             c['risk_severity'] = risk.get('severity')
-            evc = scalar('SELECT COUNT(*) FROM evidence WHERE case_id=?', (c['id'],))
-            c['evidence_count'] = evc
+            c['evidence_count'] = scalar('SELECT COUNT(*) FROM evidence WHERE case_id=?', (c['id'],))
             recent_cases.append(c)
 
         # Cases created per day ("uploaded till date")
         cases_over_time = []
         for row in self.db.execute(
-            "SELECT substr(created_at,1,10) AS day, COUNT(*) FROM cases GROUP BY day ORDER BY day"
+            f"SELECT substr(created_at,1,10) AS day, COUNT(*) FROM cases WHERE id IN ({ph}) GROUP BY day ORDER BY day",
+            owned_ids
         ).fetchall():
             cases_over_time.append({'date': row[0], 'count': row[1]})
 

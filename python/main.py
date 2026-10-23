@@ -43,12 +43,13 @@ def handle(cmd: dict) -> dict:
             result = analyzer.create_case(
                 name=payload['name'],
                 description=payload.get('description', ''),
-                investigator=payload.get('investigator', 'Student Investigator')
+                investigator=payload.get('investigator', 'Student Investigator'),
+                owner=payload.get('owner', '')
             )
             return {'ok': True, 'result': result}
 
         elif action == 'list_cases':
-            result = analyzer.list_cases()
+            result = analyzer.list_cases(owner=payload.get('owner') or None)
             return {'ok': True, 'result': result}
 
         elif action == 'get_case':
@@ -78,7 +79,7 @@ def handle(cmd: dict) -> dict:
             return {'ok': True, 'result': result}
 
         elif action == 'get_global_stats':
-            result = analyzer.get_global_stats()
+            result = analyzer.get_global_stats(owner=payload.get('owner') or None)
             return {'ok': True, 'result': result}
 
         elif action == 'import_evidence':
