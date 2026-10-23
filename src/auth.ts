@@ -30,6 +30,23 @@ const USERNAME_RE = /^[a-zA-Z0-9_.-]{3,24}$/;
 
 export class AuthError extends Error {}
 
+/**
+ * The owner used to scope every engine query, kept in memory so it is correct the
+ * instant a user logs in — never relying on a (possibly racy or blocked)
+ * localStorage read. Falls back to the persisted session on cold start.
+ */
+let activeOwner: string | null = null;
+
+export function setActiveOwner(username: string | null) {
+  activeOwner = username;
+}
+
+export function getActiveOwner(): string {
+  if (activeOwner) return activeOwner;
+  const s = currentSession();
+  return s?.username ?? '';
+}
+
 function safeGet(key: string): string | null {
   try {
     return localStorage.getItem(key);
@@ -137,6 +154,7 @@ export async function signup(
 
   const session: SessionUser = { username: user.username, displayName: user.displayName, avatar: user.avatar };
   safeSet(SESSION_KEY, JSON.stringify(session));
+  setActiveOwner(session.username);
   return session;
 }
 
@@ -153,6 +171,7 @@ export async function login(rawUsername: string, password: string): Promise<Sess
 
   const session: SessionUser = { username: user.username, displayName: user.displayName, avatar: user.avatar };
   safeSet(SESSION_KEY, JSON.stringify(session));
+  setActiveOwner(session.username);
   return session;
 }
 
@@ -181,11 +200,13 @@ export function updateProfile(
   saveUsers(users);
   const session: SessionUser = { username: user.username, displayName: user.displayName, avatar: user.avatar };
   safeSet(SESSION_KEY, JSON.stringify(session));
+  setActiveOwner(session.username);
   return session;
 }
 
 export function logout() {
   safeRemove(SESSION_KEY);
+  setActiveOwner(null);
 }
 
 export function tourDone(username: string): boolean {
@@ -198,6 +219,7 @@ export function markTourDone(username: string) {
 
 /** Wipe every local account, the active session and all onboarding flags. */
 export function clearAllAuthData() {
+  setActiveOwner(null);
   try {
     const toRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {

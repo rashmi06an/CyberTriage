@@ -1,4 +1,4 @@
-import { currentSession } from './auth';
+import { getActiveOwner } from './auth';
 import type {
   AnalysisResult,
   Artifact,
@@ -69,7 +69,7 @@ export const revealPath = (targetPath: string) => bridge().revealPath(targetPath
 
 /** The username of the signed-in account, used to scope data to its owner. */
 function ownerId(): string {
-  return currentSession()?.username ?? '';
+  return getActiveOwner();
 }
 
 export const listCases = () => call<Case[]>('list_cases', { owner: ownerId() });

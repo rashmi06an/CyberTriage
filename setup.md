@@ -193,17 +193,22 @@ Four self-contained, synthetic evidence sets, each tuned to land in a **differen
 risk band** so you can demo the whole scoring range. Scores are **deterministic**
 (the same dataset always yields the same number).
 
-| Folder | Score | Severity |
-| --- | --- | --- |
-| `01-benign-baseline` | ~9 | **LOW** |
-| `02-suspicious-insider` | ~42 | **MEDIUM** |
-| `03-malware-infection` | ~70 | **HIGH** |
-| `04-apt-breach` | ~86 | **CRITICAL** |
+| Folder | Score | Severity | Demonstrates |
+| --- | --- | --- | --- |
+| `01-benign-baseline` | ~10 | **LOW** | clean baseline |
+| `02-suspicious-insider` | ~42 | **MEDIUM** | logs + weak signals |
+| `03-malware-infection` | ~71 | **HIGH** | IOCs + network + files |
+| `04-apt-breach` | ~88 | **CRITICAL** | everything lit up |
+| `05-disk-image` | ~89 | **CRITICAL** | RAW `.dd` image carving + registry |
+| `06-registry-hive` | ~19 | **LOW** | Windows registry Run‑key findings |
 
-To load one: **Import evidence** → open one dataset folder → **Cmd+A** to select
-**every file** in it → **Import** → **Run analysis**. Select the individual files
-(not the folder) so logs, captures and files are each fully parsed. Use a fresh
-case per dataset to compare them. See `sample-data/datasets/INDEX.txt` for details.
+To load 01–04: **Import evidence** → open one dataset folder → **Cmd+A** to select
+**every file** in it → **Import** → **Run analysis**. For 05/06, select the single
+file (`apt-workstation.dd` or `NTUSER.DAT`). Importing the disk image **carves its
+filesystem and parses the registry hive inside it** in one step. Use a fresh case
+per dataset. See `sample-data/datasets/INDEX.txt` for details.
+
+> Regenerate the disk image / hive any time with `python3 scripts/make_demo_evidence.py`.
 
 ---
 

@@ -5,6 +5,7 @@ import os
 import uuid
 import json
 import sqlite3
+import tempfile
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -13,6 +14,8 @@ from utils.db import rows_to_list, row_to_dict
 from parsers.file_parser import analyze_file, scan_directory
 from parsers.log_parser import parse_logs, parse_csv_logs
 from parsers.network_parser import analyze_network, parse_network_csv, parse_network_json
+from parsers.disk_image import is_disk_image, read_disk_image
+from parsers.registry import is_registry_hive, parse_hive
 from ioc.detector import detect_iocs
 from ml.anomaly_detector import run_anomaly_detection, get_top_anomalies
 from risk.scorer import compute_risk
@@ -50,8 +53,9 @@ class CaseAnalyzer:
         return self.get_case(case_id)
 
     def list_cases(self, owner: Optional[str] = None) -> List[Dict]:
-        """List cases. When an owner is given, only that account's cases are returned."""
-        if owner:
+        """List cases. owner=None returns everything (CLI); any string (even '')
+        scopes to that owner so a signed-in user never sees another account's cases."""
+        if owner is not None:
             rows = self.db.execute(
                 'SELECT * FROM cases WHERE owner=? ORDER BY created_at DESC', (owner,)
             ).fetchall()
@@ -198,78 +202,42 @@ class CaseAnalyzer:
             self.db.execute(f'DELETE FROM {table} WHERE case_id=?', (case_id,))
         self.db.commit()
 
-        all_file_artifacts = []
-        all_log_events = []
-        all_log_patterns = []
-        all_network_records = []
-        all_ioc_findings = []
-        all_network_anomalies = []
+        buckets = {
+            'files': [],        # all_file_artifacts
+            'log_events': [],
+            'log_patterns': [],
+            'network_records': [],
+            'iocs': [],
+            'network_anomalies': [],
+            'registry': [],      # registry findings (also feed risk/artifacts)
+        }
 
         for ev in evidence_list:
             fpath = ev['filepath']
             ev_id = ev['id']
-            ext = os.path.splitext(fpath)[1].lower()
 
             try:
-                if os.path.isdir(fpath):
+                if is_disk_image(fpath) and os.path.isfile(fpath):
+                    # RAW forensic image: carve its filesystem, analyse every file inside.
+                    extracted = read_disk_image(fpath)
+                    tmpdir = tempfile.mkdtemp(prefix='ct_img_')
+                    for item in extracted:
+                        safe = item['name'].replace('/', '__').replace('\\', '__')
+                        tpath = os.path.join(tmpdir, safe)
+                        try:
+                            with open(tpath, 'wb') as out:
+                                out.write(item['data'])
+                            self._process_file(tpath, ev_id, buckets, display_name=item['name'])
+                        except Exception:
+                            pass
+                elif os.path.isdir(fpath):
                     file_results = scan_directory(fpath)
                     for fr in file_results:
                         fr['evidence_id'] = ev_id
                         fr['id'] = str(uuid.uuid4())
-                    all_file_artifacts.extend(file_results)
-                elif ext in {'.csv', '.log', '.txt'} and os.path.isfile(fpath):
-                    with open(fpath, 'r', errors='replace') as f:
-                        content = f.read(1_000_000)
-                    log_result = parse_csv_logs(content, fpath) if ext == '.csv' else parse_logs(content, fpath)
-                    all_log_events.extend(log_result.get('events', []))
-                    all_log_patterns.extend(log_result.get('suspicious_patterns', []))
-                    # Also analyze as file
-                    fa = analyze_file(fpath)
-                    fa['evidence_id'] = ev_id
-                    fa['id'] = str(uuid.uuid4())
-                    fa['failed_login_count'] = log_result.get('failed_login_count', 0)
-                    fa['unique_ip_count'] = len(log_result.get('unique_ips', []))
-                    all_file_artifacts.append(fa)
-                    # IOCs from log content
-                    iocs = detect_iocs(content, fpath)
-                    for ioc in iocs:
-                        ioc['evidence_id'] = ev_id
-                        ioc['first_seen'] = datetime.now().isoformat()
-                    all_ioc_findings.extend(iocs)
-                elif ext == '.json' and os.path.isfile(fpath):
-                    with open(fpath, 'r', errors='replace') as f:
-                        content = f.read()
-                    # Try network JSON
-                    try:
-                        net_records = parse_network_json(content)
-                        if net_records:
-                            all_network_records.extend(net_records)
-                            net_analysis = analyze_network(net_records)
-                            all_network_anomalies.extend(net_analysis.get('anomalies', []))
-                    except Exception:
-                        pass
-                    # IOCs from JSON content
-                    iocs = detect_iocs(content, fpath)
-                    for ioc in iocs:
-                        ioc['evidence_id'] = ev_id
-                        ioc['first_seen'] = datetime.now().isoformat()
-                    all_ioc_findings.extend(iocs)
-                    fa = analyze_file(fpath)
-                    fa['evidence_id'] = ev_id
-                    fa['id'] = str(uuid.uuid4())
-                    all_file_artifacts.append(fa)
+                    buckets['files'].extend(file_results)
                 else:
-                    fa = analyze_file(fpath)
-                    fa['evidence_id'] = ev_id
-                    fa['id'] = str(uuid.uuid4())
-                    # IOCs from file content
-                    if fa.get('full_content'):
-                        iocs = detect_iocs(fa['full_content'], fpath)
-                        for ioc in iocs:
-                            ioc['evidence_id'] = ev_id
-                            ioc['first_seen'] = datetime.now().isoformat()
-                        all_ioc_findings.extend(iocs)
-                    all_file_artifacts.append(fa)
+                    self._process_file(fpath, ev_id, buckets)
 
                 # Mark evidence as analyzed
                 self.db.execute(
@@ -284,6 +252,14 @@ class CaseAnalyzer:
                     (f'Error: {str(e)[:50]}', ev_id)
                 )
                 self.db.commit()
+
+        all_file_artifacts = buckets['files']
+        all_log_events = buckets['log_events']
+        all_log_patterns = buckets['log_patterns']
+        all_network_records = buckets['network_records']
+        all_ioc_findings = buckets['iocs']
+        all_network_anomalies = buckets['network_anomalies']
+        all_registry_findings = buckets['registry']
 
         # Run ML anomaly detection on file artifacts
         ml_input = [{
@@ -408,6 +384,96 @@ class CaseAnalyzer:
             'network_anomalies': all_network_anomalies,
         }
 
+    def _process_file(self, fpath: str, ev_id: str, buckets: Dict, display_name: Optional[str] = None):
+        """Analyse a single file (loose, or carved from a disk image)."""
+        name = display_name or os.path.basename(fpath)
+        ext = os.path.splitext(name)[1].lower()
+
+        # Registry hives (including those carved out of a disk image)
+        if is_registry_hive(fpath):
+            self._process_registry(fpath, ev_id, buckets, name)
+            return
+
+        if ext in {'.csv', '.log', '.txt'} and os.path.isfile(fpath):
+            with open(fpath, 'r', errors='replace') as f:
+                content = f.read(1_000_000)
+            log_result = parse_csv_logs(content, name) if ext == '.csv' else parse_logs(content, name)
+            buckets['log_events'].extend(log_result.get('events', []))
+            buckets['log_patterns'].extend(log_result.get('suspicious_patterns', []))
+            fa = analyze_file(fpath)
+            fa['evidence_id'] = ev_id
+            fa['id'] = str(uuid.uuid4())
+            fa['name'] = name
+            fa['failed_login_count'] = log_result.get('failed_login_count', 0)
+            fa['unique_ip_count'] = len(log_result.get('unique_ips', []))
+            buckets['files'].append(fa)
+            for ioc in detect_iocs(content, name):
+                ioc['evidence_id'] = ev_id
+                ioc['first_seen'] = datetime.now().isoformat()
+                buckets['iocs'].append(ioc)
+        elif ext == '.json' and os.path.isfile(fpath):
+            with open(fpath, 'r', errors='replace') as f:
+                content = f.read()
+            try:
+                net_records = parse_network_json(content)
+                if net_records:
+                    buckets['network_records'].extend(net_records)
+                    buckets['network_anomalies'].extend(analyze_network(net_records).get('anomalies', []))
+            except Exception:
+                pass
+            for ioc in detect_iocs(content, name):
+                ioc['evidence_id'] = ev_id
+                ioc['first_seen'] = datetime.now().isoformat()
+                buckets['iocs'].append(ioc)
+            fa = analyze_file(fpath)
+            fa['evidence_id'] = ev_id
+            fa['id'] = str(uuid.uuid4())
+            fa['name'] = name
+            buckets['files'].append(fa)
+        else:
+            fa = analyze_file(fpath)
+            fa['evidence_id'] = ev_id
+            fa['id'] = str(uuid.uuid4())
+            fa['name'] = name
+            if fa.get('full_content'):
+                for ioc in detect_iocs(fa['full_content'], name):
+                    ioc['evidence_id'] = ev_id
+                    ioc['first_seen'] = datetime.now().isoformat()
+                    buckets['iocs'].append(ioc)
+            buckets['files'].append(fa)
+
+    def _process_registry(self, fpath: str, ev_id: str, buckets: Dict, display_name: str):
+        """Parse a Windows registry hive and surface autostart/persistence findings."""
+        try:
+            res = parse_hive(fpath)
+        except Exception as e:
+            buckets['files'].append({
+                'id': str(uuid.uuid4()), 'evidence_id': ev_id, 'name': display_name,
+                'severity': 'LOW', 'artifact_type': 'Registry', 'size': 0,
+                'is_hidden': False, 'is_executable': False, 'modified': datetime.now().isoformat(),
+                'findings': [{'type': 'Registry', 'description': f'Could not parse hive: {e}', 'severity': 'LOW'}],
+                'source': 'Registry Analysis',
+            })
+            return
+        for f in res['findings']:
+            buckets['registry'].append(f)
+            buckets['files'].append({
+                'id': str(uuid.uuid4()), 'evidence_id': ev_id,
+                'name': f"{display_name}: {f['key']}\\{f['name']}",
+                'severity': f['severity'], 'artifact_type': 'Registry', 'size': 0,
+                'is_hidden': False, 'is_executable': False, 'modified': datetime.now().isoformat(),
+                'findings': [{
+                    'type': 'Registry Autostart',
+                    'description': f"{f['description']}  Value: {f['value']}",
+                    'severity': f['severity'],
+                }],
+                'source': 'Registry Analysis',
+            })
+        for ioc in detect_iocs(res['text'], display_name):
+            ioc['evidence_id'] = ev_id
+            ioc['first_seen'] = datetime.now().isoformat()
+            buckets['iocs'].append(ioc)
+
     def _store_artifact(self, art: Dict, art_id: str, case_id: str, evidence_id: str):
         try:
             stored = {
@@ -415,13 +481,14 @@ class CaseAnalyzer:
                 if k in ('findings', 'anomaly_features')
                 or (k not in ('full_content', 'content_preview') and not isinstance(v, (list, dict)))
             }
+            artifact_type = art.get('artifact_type', 'File')
             self.db.execute(
                 'INSERT OR IGNORE INTO artifacts (id, evidence_id, case_id, artifact_type, name, value, timestamp, source, severity, description, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-                (art_id, evidence_id, case_id, 'File',
+                (art_id, evidence_id, case_id, artifact_type,
                  str(art.get('name', ''))[:200],
                  json.dumps(stored, default=str),
                  str(art.get('modified', art.get('created', datetime.now().isoformat())))[:19],
-                 'File Analysis',
+                 art.get('source', 'File Analysis'),
                  art.get('severity', 'LOW'),
                  str(art.get('findings', []))[:500],
                  datetime.now().isoformat())
@@ -519,8 +586,8 @@ class CaseAnalyzer:
         When an owner is given, every metric is scoped to the cases that account
         owns, so a brand-new account starts with an empty dashboard.
         """
-        # Case ids visible to this request.
-        if owner:
+        # Case ids visible to this request. owner=None → all (CLI); any string → scoped.
+        if owner is not None:
             owned_ids = [r[0] for r in self.db.execute('SELECT id FROM cases WHERE owner=?', (owner,)).fetchall()]
         else:
             owned_ids = [r[0] for r in self.db.execute('SELECT id FROM cases').fetchall()]

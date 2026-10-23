@@ -1,12 +1,15 @@
 """
-Isolation Forest anomaly detector.
-Uses real scikit-learn IsolationForest — not synthetic scores.
+Isolation Forest anomaly detector — a compact, dependency-light implementation.
 
-numpy and scikit-learn are imported lazily inside run_anomaly_detection so the
-engine process can start (and emit its "ready" banner) instantly. Loading
-scikit-learn/scipy/numpy eagerly at import time added several seconds to every
-launch — they are only needed when analysis actually runs.
+This is a real Isolation Forest (Liu, Ting & Zhou, 2008): it isolates anomalies
+by randomly partitioning the feature space and measuring how short the path to
+isolate each point is. It uses only NumPy — no scikit-learn/scipy — which keeps
+the packaged engine small while preserving genuine, deterministic ML scoring.
+
+numpy is imported lazily inside run_anomaly_detection so the engine process can
+start (and emit its "ready" banner) instantly.
 """
+import math
 from typing import List, Dict
 
 
@@ -25,11 +28,12 @@ FEATURE_NAMES = [
     'suspicious_ext_flag',
 ]
 
+N_TREES = 100
+SUBSAMPLE = 256
+
 
 def build_feature_vector(artifact: Dict) -> List[float]:
     """Build a numeric feature vector from an artifact dict."""
-    import os, time
-
     # File age in days
     try:
         modified = artifact.get('modified', '')
@@ -64,58 +68,93 @@ def build_feature_vector(artifact: Dict) -> List[float]:
     ]
 
 
+def _c(n: int) -> float:
+    """Average path length of an unsuccessful BST search over n points."""
+    if n <= 1:
+        return 0.0
+    return 2.0 * (math.log(n - 1) + 0.5772156649) - (2.0 * (n - 1) / n)
+
+
+def _build_tree(X, idx, rng, depth, max_depth):
+    import numpy as np
+    n = len(idx)
+    if depth >= max_depth or n <= 1:
+        return {'size': n}
+    feats = list(range(X.shape[1]))
+    rng.shuffle(feats)
+    for f in feats:
+        col = X[idx, f]
+        mn = float(col.min())
+        mx = float(col.max())
+        if mx > mn:
+            split = rng.uniform(mn, mx)
+            left = idx[col < split]
+            right = idx[col >= split]
+            return {
+                'f': f, 's': split,
+                'l': _build_tree(X, left, rng, depth + 1, max_depth),
+                'r': _build_tree(X, right, rng, depth + 1, max_depth),
+            }
+    return {'size': n}
+
+
+def _path_length(x, node, depth):
+    while 'size' not in node:
+        node = node['l'] if x[node['f']] < node['s'] else node['r']
+        depth += 1
+    return depth + _c(node['size'])
+
+
 def run_anomaly_detection(artifacts: List[Dict]) -> List[Dict]:
     """
-    Run Isolation Forest on a list of artifact feature vectors.
+    Run an Isolation Forest over the artifact feature vectors.
     Returns each artifact with an anomaly_score (0-100, higher = more anomalous).
     """
     if not artifacts:
         return []
 
-    # Imported here (not at module top) so engine startup stays instant.
     import numpy as np
-    from sklearn.ensemble import IsolationForest
 
     features = [build_feature_vector(a) for a in artifacts]
     X = np.array(features, dtype=float)
+    n = len(X)
 
-    # Need at least 2 samples to train
-    if len(X) < 2:
+    if n < 2:
+        out = []
         for a in artifacts:
-            a['anomaly_score'] = 10.0
-            a['is_anomaly'] = False
-        return artifacts
+            b = dict(a)
+            b['anomaly_score'] = 10.0
+            b['is_anomaly'] = False
+            b['anomaly_features'] = {name: round(features[0][j], 3) for j, name in enumerate(FEATURE_NAMES)}
+            out.append(b)
+        return out
 
-    # contamination: assume ~10% of items may be anomalous
-    contamination = min(0.5, max(0.01, 1.0 / len(X) * 2))
+    rng = np.random.default_rng(42)  # deterministic
+    psi = min(SUBSAMPLE, n)
+    max_depth = max(1, int(math.ceil(math.log2(psi))))
 
-    clf = IsolationForest(
-        n_estimators=100,
-        contamination=contamination,
-        random_state=42,
-    )
-    clf.fit(X)
+    trees = []
+    all_idx = np.arange(n)
+    for _ in range(N_TREES):
+        if n > psi:
+            sample = rng.choice(all_idx, size=psi, replace=False)
+        else:
+            sample = all_idx
+        trees.append(_build_tree(X, sample, rng, 0, max_depth))
 
-    # decision_function: more negative = more anomalous
-    scores = clf.decision_function(X)
-    predictions = clf.predict(X)  # -1 = anomaly, 1 = normal
-
-    # Normalize scores to 0-100 (higher = more anomalous)
-    min_s, max_s = scores.min(), scores.max()
-    if max_s == min_s:
-        normalized = [50.0] * len(scores)
-    else:
-        normalized = [100.0 * (1.0 - (s - min_s) / (max_s - min_s)) for s in scores]
+    cn = _c(psi)
+    scores = []
+    for i in range(n):
+        avg_path = sum(_path_length(X[i], t, 0) for t in trees) / len(trees)
+        s = 2.0 ** (-avg_path / cn) if cn > 0 else 0.5
+        scores.append(s)
 
     results = []
     for i, artifact in enumerate(artifacts):
         a = dict(artifact)
-        a['anomaly_score'] = round(normalized[i], 2)
-        a['is_anomaly'] = predictions[i] == -1
-        a['anomaly_features'] = {
-            name: round(features[i][j], 3)
-            for j, name in enumerate(FEATURE_NAMES)
-        }
+        a['anomaly_score'] = round(float(scores[i]) * 100.0, 2)
+        a['is_anomaly'] = bool(scores[i] >= 0.6)
+        a['anomaly_features'] = {name: round(features[i][j], 3) for j, name in enumerate(FEATURE_NAMES)}
         results.append(a)
 
     return results

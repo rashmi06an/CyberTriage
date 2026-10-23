@@ -49,7 +49,8 @@ def handle(cmd: dict) -> dict:
             return {'ok': True, 'result': result}
 
         elif action == 'list_cases':
-            result = analyzer.list_cases(owner=payload.get('owner') or None)
+            # owner absent (None) → all cases (CLI); owner present (even '') → scoped
+            result = analyzer.list_cases(owner=payload.get('owner'))
             return {'ok': True, 'result': result}
 
         elif action == 'get_case':
@@ -79,7 +80,7 @@ def handle(cmd: dict) -> dict:
             return {'ok': True, 'result': result}
 
         elif action == 'get_global_stats':
-            result = analyzer.get_global_stats(owner=payload.get('owner') or None)
+            result = analyzer.get_global_stats(owner=payload.get('owner'))
             return {'ok': True, 'result': result}
 
         elif action == 'import_evidence':

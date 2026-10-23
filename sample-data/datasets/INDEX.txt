@@ -1,18 +1,25 @@
 CyberTriage — Demo Datasets
 ===========================
 
-Four self-contained, SYNTHETIC evidence sets (nothing here is a real threat).
-Each one is designed to produce a different, repeatable risk score so you can
-show the full range of the scoring engine in a single sitting.
+Six self-contained, SYNTHETIC evidence sets (nothing here is a real threat).
+Datasets 01-04 each produce a different, repeatable risk score so you can show
+the full range of the scoring engine. Datasets 05-06 demonstrate RAW disk-image
+ingestion and Windows registry parsing.
 
-  Folder                      Expected score   Severity
-  --------------------------  --------------   --------
-  01-benign-baseline          ~9  / 100        LOW
-  02-suspicious-insider       ~42 / 100        MEDIUM
-  03-malware-infection        ~70 / 100        HIGH
-  04-apt-breach               ~86 / 100        CRITICAL
+  Folder                      Expected score   Severity   Demonstrates
+  --------------------------  --------------   --------   ---------------------------
+  01-benign-baseline          ~10 / 100        LOW        clean baseline
+  02-suspicious-insider       ~42 / 100        MEDIUM     logs + weak signals
+  03-malware-infection        ~71 / 100        HIGH       IOCs + network + files
+  04-apt-breach               ~88 / 100        CRITICAL   everything lit up
+  05-disk-image               ~89 / 100        CRITICAL   RAW .dd image + registry
+  06-registry-hive            ~19 / 100        LOW        registry Run-key findings
 
 Scores are deterministic — the same dataset always produces the same number.
+
+Datasets 05 and 06 are a SINGLE file each (a .dd disk image / a NTUSER.DAT hive),
+so just select that one file. Importing 05 carves the filesystem AND parses the
+registry hive inside it.
 
 How to load one (in the app)
 ----------------------------
