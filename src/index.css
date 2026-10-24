@@ -1567,6 +1567,7 @@ code { padding: 2px 5px; border: 1px solid rgba(148, 163, 184, 0.2); border-radi
 }
 
 /* ── Shared helpers ──────────────────────────────────────────────── */
+.boot-screen { position: fixed; inset: 0; z-index: 1; background: var(--bg); }
 .accent-text { color: var(--accent); }
 .field-opt { color: var(--muted); font-weight: 500; font-size: 11px; }
 

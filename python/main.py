@@ -39,6 +39,31 @@ def handle(cmd: dict) -> dict:
         if action == 'ping':
             return {'ok': True, 'result': 'pong'}
 
+        elif action == 'signup':
+            result = analyzer.signup_user(
+                username=payload['username'],
+                password=payload['password'],
+                display_name=payload.get('display_name', ''),
+                avatar=payload.get('avatar', ''),
+            )
+            return {'ok': True, 'result': result}
+
+        elif action == 'login':
+            result = analyzer.login_user(username=payload['username'], password=payload['password'])
+            return {'ok': True, 'result': result}
+
+        elif action == 'update_profile':
+            result = analyzer.update_user_profile(
+                username=payload['username'],
+                display_name=payload.get('display_name'),
+                avatar=payload.get('avatar'),
+            )
+            return {'ok': True, 'result': result}
+
+        elif action == 'import_legacy_users':
+            result = analyzer.import_legacy_users(payload.get('users', []))
+            return {'ok': True, 'result': result}
+
         elif action == 'create_case':
             result = analyzer.create_case(
                 name=payload['name'],

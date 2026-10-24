@@ -118,16 +118,17 @@ Three cooperating layers — the core of a desktop-development project:
 `BrowserWindow` on `app.whenReady()` and manages the window lifecycle; a **secure IPC bridge**
 (`electron/preload.ts`, `contextBridge` + `contextIsolation`) is the *only* channel between UI and
 engine; **native OS integration** via file/save dialogs and reveal-in-Finder; **state &
-persistence** in SQLite (cases) + localStorage (accounts); **local AI/ML inference** (no cloud);
+persistence** in SQLite (cases **and user accounts**) with the active session on the client; **local AI/ML inference** (no cloud);
 and **packaging** with PyInstaller + electron-builder into a signed DMG. *(See [`Student.md`](Student.md) for the file-by-file map.)*
 
 **Data flow:** the UI never runs Python directly — every request goes **React → Electron (preload
 → main) → Python → back**, as one line of JSON each way.
 
 **Where data lives:** cases/evidence/findings in a local **SQLite** file
-(`~/Library/Application Support/CyberTriage/cybertriage.db` when installed); accounts in the app's
-local storage (passwords **salted + SHA-256 hashed**); reports where you choose. Nothing leaves the
-machine; evidence is referenced by path (and hashed), not copied.
+(`~/Library/Application Support/CyberTriage/cybertriage.db` when installed) — including a `users`
+table with **salted + SHA-256 hashed** passwords (the engine verifies them; the client only keeps
+the active session). Reports go where you choose. Nothing leaves the machine; evidence is
+referenced by path (and hashed), not copied.
 
 ---
 

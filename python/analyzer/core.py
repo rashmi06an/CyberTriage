@@ -2,9 +2,12 @@
 Core CyberTriage analysis orchestrator.
 """
 import os
+import re
 import uuid
 import json
 import sqlite3
+import hashlib
+import secrets
 import tempfile
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -37,6 +40,94 @@ class CaseAnalyzer:
             (case_id, action, details, datetime.now().isoformat())
         )
         self.db.commit()
+
+    # ─── User Accounts ──────────────────────────────────────────────────
+
+    _USERNAME_RE = re.compile(r'^[a-zA-Z0-9_.-]{3,24}$')
+
+    @staticmethod
+    def _hash_pw(salt: str, password: str) -> str:
+        """Salted SHA-256 — matches the earlier client-side scheme so migrated accounts still work."""
+        return hashlib.sha256(f'{salt}:{password}'.encode('utf-8')).hexdigest()
+
+    @staticmethod
+    def _user_public(row) -> Dict:
+        return {'username': row['username'], 'display_name': row['display_name'], 'avatar': row['avatar']}
+
+    def signup_user(self, username: str, password: str, display_name: str = '', avatar: str = '') -> Dict:
+        username = (username or '').strip()
+        if not username:
+            return {'error': 'Choose a username.'}
+        if not self._USERNAME_RE.match(username):
+            return {'error': 'Username must be 3–24 characters: letters, numbers, dot, dash or underscore.'}
+        if not password:
+            return {'error': 'Choose a password.'}
+        if len(password) < 6:
+            return {'error': 'Password must be at least 6 characters.'}
+        if self.db.execute('SELECT 1 FROM users WHERE username=? COLLATE NOCASE', (username,)).fetchone():
+            return {'error': 'That username already exists on this machine. Pick a different one so each account keeps its own cases.'}
+
+        salt = secrets.token_hex(16)
+        ph = self._hash_pw(salt, password)
+        dn = (display_name or username).strip()[:40] or username
+        self.db.execute(
+            'INSERT INTO users (username, display_name, salt, password_hash, avatar, created_at) VALUES (?,?,?,?,?,?)',
+            (username, dn, salt, ph, avatar or None, datetime.now().isoformat())
+        )
+        self.db.commit()
+        return {'username': username, 'display_name': dn, 'avatar': avatar or None}
+
+    def login_user(self, username: str, password: str) -> Dict:
+        username = (username or '').strip()
+        if not username or not password:
+            return {'error': 'Enter your username and password.'}
+        row = self.db.execute(
+            'SELECT username, display_name, salt, password_hash, avatar FROM users WHERE username=? COLLATE NOCASE',
+            (username,)
+        ).fetchone()
+        if not row:
+            return {'error': 'No account found with that username.'}
+        if self._hash_pw(row['salt'], password) != row['password_hash']:
+            return {'error': 'Incorrect password.'}
+        return self._user_public(row)
+
+    def update_user_profile(self, username: str, display_name: Optional[str] = None,
+                            avatar: Optional[str] = None) -> Dict:
+        if not self.db.execute('SELECT 1 FROM users WHERE username=? COLLATE NOCASE', (username,)).fetchone():
+            return {'error': 'Account not found.'}
+        fields, vals = [], []
+        if display_name is not None:
+            fields.append('display_name=?'); vals.append((display_name.strip()[:40]) or username)
+        if avatar is not None:
+            fields.append('avatar=?'); vals.append(avatar or None)
+        if fields:
+            vals.append(username)
+            self.db.execute(f'UPDATE users SET {", ".join(fields)} WHERE username=? COLLATE NOCASE', vals)
+            self.db.commit()
+        row = self.db.execute(
+            'SELECT username, display_name, avatar FROM users WHERE username=? COLLATE NOCASE', (username,)
+        ).fetchone()
+        return self._user_public(row)
+
+    def import_legacy_users(self, users: List[Dict]) -> Dict:
+        """One-time migration of accounts that previously lived in the browser's localStorage.
+        They already carry a salt + SHA-256 hash in the same scheme, so they migrate as-is."""
+        imported = 0
+        for u in users or []:
+            uname = (u.get('username') or '').strip()
+            salt, ph = u.get('salt'), u.get('hash')
+            if not uname or not salt or not ph:
+                continue
+            if self.db.execute('SELECT 1 FROM users WHERE username=? COLLATE NOCASE', (uname,)).fetchone():
+                continue
+            self.db.execute(
+                'INSERT INTO users (username, display_name, salt, password_hash, avatar, created_at) VALUES (?,?,?,?,?,?)',
+                (uname, (u.get('displayName') or uname)[:40], salt, ph, u.get('avatar'),
+                 u.get('createdAt') or datetime.now().isoformat())
+            )
+            imported += 1
+        self.db.commit()
+        return {'imported': imported}
 
     # ─── Case Management ───────────────────────────────────────────────
 
@@ -129,7 +220,7 @@ class CaseAnalyzer:
         # Child tables first, then cases last — foreign_keys=ON would otherwise
         # reject deleting a case that still has evidence/artifacts referencing it.
         for table in ('artifacts', 'ioc_findings', 'timeline_events', 'network_activity',
-                      'risk_findings', 'evidence', 'audit_log', 'cases'):
+                      'risk_findings', 'evidence', 'audit_log', 'cases', 'users'):
             try:
                 counts[table] = self.db.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0]
                 self.db.execute(f'DELETE FROM {table}')

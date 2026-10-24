@@ -114,7 +114,7 @@ export function AccountMenu() {
           username={user.username}
           onClose={() => setShowProfile(false)}
           onSave={(updates) => {
-            updateProfile(updates);
+            void updateProfile(updates);
             setShowProfile(false);
           }}
         />

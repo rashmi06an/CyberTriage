@@ -1,3 +1,12 @@
+CREATE TABLE IF NOT EXISTS users (
+  username TEXT PRIMARY KEY COLLATE NOCASE,
+  display_name TEXT,
+  salt TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  avatar TEXT,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS cases (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,

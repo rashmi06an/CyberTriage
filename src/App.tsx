@@ -54,7 +54,7 @@ function Sidebar({ state, onRetry }: { state: EngineState | null; onRetry: () =>
 }
 
 function Workspace() {
-  const { user, showTour, finishTour } = useAuth();
+  const { user, ready, showTour, finishTour } = useAuth();
   const [state, setState] = useState<EngineState | null>(() =>
     hasBridge() ? null : { state: 'error', detail: 'Desktop bridge unavailable — run npm run electron:dev' }
   );
@@ -72,6 +72,10 @@ function Workspace() {
       .then(setState)
       .catch(() => setState({ state: 'error', detail: 'Engine restart failed' }));
   };
+
+  if (!ready) {
+    return <div className="boot-screen" aria-hidden="true" />;
+  }
 
   if (!user) {
     return <Welcome />;

@@ -72,6 +72,23 @@ function ownerId(): string {
   return getActiveOwner();
 }
 
+// ─── User accounts (stored in SQLite, verified by the Python engine) ───────
+interface UserDTO {
+  username: string;
+  display_name: string;
+  avatar?: string | null;
+}
+export const signupUser = (username: string, password: string, displayName?: string) =>
+  call<UserDTO>('signup', { username, password, display_name: displayName ?? '' });
+export const loginUser = (username: string, password: string) =>
+  call<UserDTO>('login', { username, password });
+export const updateUserProfile = (
+  username: string,
+  fields: { displayName?: string; avatar?: string | null }
+) => call<UserDTO>('update_profile', { username, display_name: fields.displayName, avatar: fields.avatar });
+export const importLegacyUsers = (users: Array<Record<string, unknown>>) =>
+  call<{ imported: number }>('import_legacy_users', { users });
+
 export const listCases = () => call<Case[]>('list_cases', { owner: ownerId() });
 export const createCase = (name: string, description: string, investigator: string) =>
   call<Case>('create_case', { name, description, investigator, owner: ownerId() });
