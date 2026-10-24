@@ -17,6 +17,11 @@ Sign in → create a case → import evidence (files, **RAW disk images**, or **
 > DFIR problem statement. Not an official NIA product; not for court-admissible evidence.
 >  Full project guide + live-demo script: **[`Student.md`](Student.md)** ·  Commands: **[`setup.md`](setup.md)**
 
+###  [Download the app (CyberTriage DMG — Google Drive)](https://drive.google.com/drive/folders/1ipC_T_R-SgYsBm_sXvhaKLHAbex65ih6)
+
+> Apple Silicon Mac only. After downloading, drag **CyberTriage** to **Applications**, then
+> first-launch with **right-click → Open** (one-time Gatekeeper step, since it isn't notarized).
+
 ---
 
 ## What it does
@@ -77,8 +82,9 @@ npm run electron:dev
 
 Then: **sign up → create a case → Load sample data → Run analysis**.
 
-**Just want the app?** Open `release/CyberTriage-1.0.0-arm64-signed.dmg`, drag it to Applications,
-and first-launch with **right-click → Open**. It bundles everything — no Python or Node needed.
+**Just want the app?** **[Download the DMG from Google Drive](https://drive.google.com/drive/folders/1ipC_T_R-SgYsBm_sXvhaKLHAbex65ih6)**
+(or build it locally — see below), drag it to Applications, and first-launch with **right-click →
+Open**. It bundles everything — no Python or Node needed.
 
 > Build the installer yourself: `npm run package:mac-arm64 && npm run resign`. All commands and
 > troubleshooting are in **[`setup.md`](setup.md)**.
