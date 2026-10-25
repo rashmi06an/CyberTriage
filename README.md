@@ -9,13 +9,13 @@ Sign in → create a case → import evidence (files, **RAW disk images**, or **
 
 
 
-<img src="docs/screenshots/risk.png" width="90%" alt="CyberTriage — risk analysis of a case" />
+<img src="docs/screenshots/launch.png" width="90%" alt="CyberTriage — launch console" />
 
 </div>
 
 > **Student desktop-development project**, inspired by the **NIA Anti-Cyber Terrorism Division**
 > DFIR problem statement. Not an official NIA product; not for court-admissible evidence.
->  Full project guide + live-demo script: **[`Student.md`](Student.md)** ·  Commands: **[`setup.md`](setup.md)**
+> ·  Commands: **[`setup.md`](setup.md)**
 
 ###  [Download the app (CyberTriage DMG — Google Drive)](https://drive.google.com/drive/folders/1ipC_T_R-SgYsBm_sXvhaKLHAbex65ih6)
 
@@ -59,14 +59,14 @@ The NIA brief asks for five capabilities. **All five are implemented:**
 
 | | |
 | :---: | :---: |
-| <img src="docs/screenshots/welcome.png" width="100%"/> | <img src="docs/screenshots/evidence.png" width="100%"/> |
-| **Login / sign-up gate** | **Case — evidence register (hashed on import)** |
-| <img src="docs/screenshots/risk.png" width="100%"/> | <img src="docs/screenshots/export.png" width="100%"/> |
-| **Risk tab — score, "why", recommendations** | **One Export menu → PDF / CSV / JSON** |
-| <img src="docs/screenshots/help.png" width="100%"/> | <img src="docs/screenshots/tour.png" width="100%"/> |
-| **In-app help / field guide** | **First-run guided tour** |
-| <img src="docs/screenshots/account.png" width="100%"/> | <img src="docs/screenshots/reset.png" width="100%"/> |
-| **Account menu (profile, tour, reset, log out)** | **Reset (type-to-confirm)** |
+| <img src="docs/screenshots/welcome.png" width="100%"/> | <img src="docs/screenshots/home.png" width="100%"/> |
+| **Login / sign-up gate** | **Home — combined dashboard across all cases** |
+| <img src="docs/screenshots/case.png" width="100%"/> | <img src="docs/screenshots/risk.png" width="100%"/> |
+| **Case detail — stat tiles, tabs & insights** | **Risk — composite score, "why" & recommendations** |
+| <img src="docs/screenshots/evidence.png" width="100%"/> | <img src="docs/screenshots/help.png" width="100%"/> |
+| **Evidence register (SHA-256/MD5 hashed)** | **In-app help / field guide** |
+| <img src="docs/screenshots/tour.png" width="100%"/> | <img src="docs/screenshots/reset.png" width="100%"/> |
+| **First-run guided tour** | **Reset (type-to-confirm)** |
 
 ---
 
@@ -125,7 +125,7 @@ Three cooperating layers — the core of a desktop-development project:
 (`electron/preload.ts`, `contextBridge` + `contextIsolation`) is the *only* channel between UI and
 engine; **native OS integration** via file/save dialogs and reveal-in-Finder; **state &
 persistence** in SQLite (cases **and user accounts**) with the active session on the client; **local AI/ML inference** (no cloud);
-and **packaging** with PyInstaller + electron-builder into a signed DMG. *(See [`Student.md`](Student.md) for the file-by-file map.)*
+and **packaging** with PyInstaller + electron-builder into a signed DMG. 
 
 **Data flow:** the UI never runs Python directly — every request goes **React → Electron (preload
 → main) → Python → back**, as one line of JSON each way.
