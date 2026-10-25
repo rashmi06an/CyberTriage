@@ -108,7 +108,7 @@ export function CyberBackground() {
           const dist = Math.hypot(dx, dy);
           if (dist < LINK_DIST) {
             const alpha = (1 - dist / LINK_DIST) * 0.22;
-            ctx.strokeStyle = `rgba(94, 234, 212, ${alpha})`;
+            ctx.strokeStyle = `rgba(198, 243, 74, ${alpha})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
@@ -123,7 +123,7 @@ export function CyberBackground() {
         const glow = 0.5 + Math.sin(n.pulse) * 0.5;
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r + glow * 1.4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(103, 232, 249, ${0.35 + glow * 0.4})`;
+        ctx.fillStyle = `rgba(73, 224, 208, ${0.35 + glow * 0.4})`;
         ctx.fill();
       }
 
@@ -138,8 +138,8 @@ export function CyberBackground() {
         const y = a.y + (b.y - a.y) * p.t;
         ctx.beginPath();
         ctx.arc(x, y, 2.2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(191, 252, 244, 0.95)';
-        ctx.shadowColor = 'rgba(94, 234, 212, 0.9)';
+        ctx.fillStyle = 'rgba(245, 246, 249, 0.95)';
+        ctx.shadowColor = 'rgba(198, 243, 74, 0.9)';
         ctx.shadowBlur = 10;
         ctx.fill();
         ctx.shadowBlur = 0;

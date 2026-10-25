@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { HashRouter, NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { engineStatus, hasBridge, onEngineState, restartEngine } from './api';
 import { BrandLogo } from './components/Logo';
 import { EnginePill } from './components/ui';
 import { CyberBackground } from './components/CyberBackground';
+import { LaunchSequence } from './components/LaunchSequence';
 import { TopBar } from './components/TopBar';
 import { Tour } from './components/Tour';
 import { AuthProvider, useAuth } from './AuthContext';
@@ -103,13 +104,35 @@ function Workspace() {
   );
 }
 
+const LAUNCH_SEEN_KEY = 'cybertriage-launch-seen';
+
+function shouldShowLaunch() {
+  try {
+    return sessionStorage.getItem(LAUNCH_SEEN_KEY) !== '1';
+  } catch {
+    return true;
+  }
+}
+
 export default function App() {
+  const [showLaunch, setShowLaunch] = useState(shouldShowLaunch);
+
+  const finishLaunch = useCallback(() => {
+    try {
+      sessionStorage.setItem(LAUNCH_SEEN_KEY, '1');
+    } catch {
+      // storage unavailable — the overlay simply shows again next load
+    }
+    setShowLaunch(false);
+  }, []);
+
   return (
     <HashRouter>
       <CyberBackground />
       <AuthProvider>
         <Workspace />
       </AuthProvider>
+      {showLaunch ? <LaunchSequence onDone={finishLaunch} /> : null}
     </HashRouter>
   );
 }

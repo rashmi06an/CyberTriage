@@ -140,15 +140,15 @@ export default function Home() {
                         <AreaChart data={stats.cases_over_time}>
                           <defs>
                             <linearGradient id="casesTrend" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#27e9b5" stopOpacity={0.5} />
-                              <stop offset="95%" stopColor="#27e9b5" stopOpacity={0.02} />
+                              <stop offset="5%" stopColor="#c6f34a" stopOpacity={0.5} />
+                              <stop offset="95%" stopColor="#c6f34a" stopOpacity={0.02} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid stroke={CHART_GRID} vertical={false} />
                           <XAxis dataKey="date" tick={CHART_TICK} axisLine={false} tickLine={false} />
                           <YAxis allowDecimals={false} tick={CHART_TICK} axisLine={false} tickLine={false} width={32} />
                           <Tooltip contentStyle={TOOLTIP_STYLE} />
-                          <Area type="monotone" dataKey="count" stroke="#27e9b5" strokeWidth={2} fill="url(#casesTrend)" />
+                          <Area type="monotone" dataKey="count" stroke="#c6f34a" strokeWidth={2} fill="url(#casesTrend)" />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
